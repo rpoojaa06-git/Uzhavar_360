@@ -37,21 +37,6 @@ class Source(BaseModel):
     score: float
 
 
-class SchemeRecommendation(BaseModel):
-    scheme_id: str
-    name: str
-    tamil_name: Optional[str] = None
-    category: str
-    department: str
-    description: str
-    subsidy_details: str
-    potential_match: int
-    reasons: List[str]
-    official_url: str
-    required_documents: List[str]
-    disclaimer: str
-
-
 class ChatMessage(BaseModel):
     role: str  # "user" or "assistant"
     content: str
@@ -75,4 +60,3 @@ class ChatResponse(BaseModel):
     sources: List[Source]
     current_stage: Optional[str] = None
     next_step_recommendation: Optional[str] = None
-    scheme_card: Optional[SchemeRecommendation] = None

@@ -1,12 +1,11 @@
 from fastapi import FastAPI, HTTPException
 from typing import List, Dict, Any, Optional
-from .models import ChatRequest, ChatResponse, Source, SchemeRecommendation, FARMING_STAGES
+from .models import ChatRequest, ChatResponse, Source, FARMING_STAGES
 from .rag import RAG
-from .schemes import evaluate_scheme_eligibility, TAMIL_NADU_SCHEMES
 
 app = FastAPI(
-    title="Uzhavar AI — Intelligent Farmer Journey & Scheme Discovery API",
-    description="Conversational agricultural guidance grounded in verified ICAR & TNAU knowledge with contextual scheme eligibility evaluation."
+    title="Uzhavar AI — Intelligent Farmer Agricultural Guidance API",
+    description="Conversational agricultural guidance grounded in verified ICAR & TNAU knowledge."
 )
 
 rag = RAG()
@@ -20,17 +19,6 @@ def health():
 @app.get("/stages")
 def get_farming_stages():
     return {"stages": FARMING_STAGES}
-
-
-@app.get("/schemes")
-def get_all_schemes():
-    return {"schemes": TAMIL_NADU_SCHEMES}
-
-
-@app.post("/eligibility/check")
-def check_eligibility(query: str, profile: dict):
-    matches = evaluate_scheme_eligibility(query, profile)
-    return {"matches": matches}
 
 
 @app.post("/ingest")
@@ -59,17 +47,12 @@ def chat(request: ChatRequest):
 
     history = [m.model_dump() for m in request.history] if request.history else []
 
-    answer, contexts, matched_schemes, stage = rag.answer(
+    answer, contexts, _, stage = rag.answer(
         question=request.question,
         profile=profile,
         history=history,
         return_details=True
     )
-
-    scheme_card = None
-    if matched_schemes:
-        top_scheme = matched_schemes[0]
-        scheme_card = SchemeRecommendation(**top_scheme)
 
     return ChatResponse(
         answer=answer,
@@ -82,6 +65,5 @@ def chat(request: ChatRequest):
             for c in contexts
         ],
         current_stage=stage,
-        next_step_recommendation="Consult local agricultural officer or check next stage advisories.",
-        scheme_card=scheme_card
+        next_step_recommendation="Consult local agricultural officer or check next stage advisories."
     )

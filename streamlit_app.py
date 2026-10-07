@@ -1,19 +1,22 @@
 """
 Uzhavar AI — Voice-First Intelligent Agricultural Guide
 ================================================================================
-Features:
-  1. Language Selection Splash with Auto Voice Guidance (English & Tamil)
-  2. Voice & Interactive Onboarding (Name, Age, Gender, Farmer Category, Documents)
-  3. Persistent Offline Profile Storage (SQLite & JSON in data/)
-  4. Grounded Agricultural RAG Guidance (Focused purely on agronomy & farming)
-  5. Always-Visible Top Navigation with Instant Voice/Text & Language Toggles
-  6. Modern, Fluid Glassmorphism UI with Micro-Animations & Polished Effects
+Highlighted, High-Contrast UI & Accessible Farmer Experience:
+  1. Language Selection with Automatic Bilingual Voice Audio
+  2. Guided Onboarding with Large High-Contrast Step Cards
+  3. Persistent Farmer Profile Storage in SQLite & JSON (silent, zero clutter)
+  4. High-Contrast Message Containers (User & Assistant cards never merge with background)
+  5. Dedicated Live Voice Hub with Audio Visualizer & Clear Transcript Pill
+  6. Listen Aloud (TTS) capability for all agricultural responses
+  7. Categorized Quick Action Agricultural Questions
+  8. Persistent Top Navigation with Instant Voice/Text & Language Toggles
 """
 
 import streamlit as st
-import streamlit.components.v1 as components
+import re
 import json
 import time
+import html
 from app.profile_store import save_farmer_profile
 
 # ============================================================
@@ -27,41 +30,50 @@ st.set_page_config(
 )
 
 # ============================================================
-# MODERN DESIGN SYSTEM & MICRO-ANIMATIONS (CSS)
+# HIGH-CONTRAST DESIGN SYSTEM & MICRO-ANIMATIONS (CSS)
 # ============================================================
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+Tamil:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+Tamil:wght@400;500;600;700;800&display=swap');
 
 :root {
-    --primary: #1e7e34;
-    --primary-dark: #145a27;
+    --bg-page: #f1f5f1;
+    --primary-dark: #134e23;
+    --primary-main: #1b7332;
     --primary-light: #e8f5e9;
-    --primary-hover: #155724;
-    --accent: #f59e0b;
-    --accent-light: #fef3c7;
-    --surface-glass: rgba(255, 255, 255, 0.92);
-    --surface-card: #ffffff;
-    --border-soft: #c8e6c9;
-    --border-glass: rgba(46, 125, 50, 0.16);
-    --text-main: #1c2b1e;
-    --text-muted: #4a5d4e;
-    --shadow-soft: 0 10px 25px -5px rgba(24, 75, 34, 0.08), 0 8px 10px -6px rgba(24, 75, 34, 0.04);
-    --shadow-hover: 0 14px 28px -4px rgba(24, 75, 34, 0.14), 0 10px 10px -5px rgba(24, 75, 34, 0.06);
+    --user-card-bg: #eaf8ed;
+    --user-card-border: #72cf87;
+    --ai-card-bg: #ffffff;
+    --ai-card-border: #1b7332;
+    --accent-gold: #f59e0b;
+    --accent-gold-bg: #fffbeb;
+    --text-dark: #0f172a;
+    --text-muted: #334155;
+    --shadow-card: 0 10px 25px -5px rgba(19, 78, 35, 0.10), 0 8px 10px -6px rgba(19, 78, 35, 0.05);
+    --shadow-float: 0 16px 36px -6px rgba(19, 78, 35, 0.16);
 }
 
-/* Global Font & Smooth Scrolling */
-html, body, [class*="css"] {
+/* App Canvas */
+html, body, [class*="css"], [data-testid="stAppViewContainer"] {
     font-family: 'Plus Jakarta Sans', 'Noto Sans Tamil', -apple-system, BlinkMacSystemFont, sans-serif;
-    color: var(--text-main);
-    background-color: #f7faf7;
+    color: var(--text-dark);
+    background-color: var(--bg-page) !important;
 }
 
-/* Keyframe Animations */
+/* Hide 1px audio TTS iframes completely */
+iframe[height="1"], [data-testid="stIFrame"]:has(iframe[height="1"]) {
+    display: none !important;
+    position: absolute !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    width: 0 !important;
+}
+
+/* Animations */
 @keyframes fadeInUp {
     from {
         opacity: 0;
-        transform: translateY(18px);
+        transform: translateY(16px);
     }
     to {
         opacity: 1;
@@ -69,218 +81,311 @@ html, body, [class*="css"] {
     }
 }
 
-@keyframes fadeInDown {
-    from {
-        opacity: 0;
-        transform: translateY(-14px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+@keyframes pulseMic {
+    0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.55); }
+    70% { box-shadow: 0 0 0 18px rgba(220, 38, 38, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
 }
 
-@keyframes floatMascot {
-    0% { transform: translateY(0px) rotate(0deg); }
-    50% { transform: translateY(-8px) rotate(2deg); }
-    100% { transform: translateY(0px) rotate(0deg); }
+@keyframes gentleFloat {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-7px); }
+    100% { transform: translateY(0px); }
 }
 
-@keyframes pulseGlow {
-    0% {
-        box-shadow: 0 0 0 0 rgba(46, 125, 50, 0.4);
-    }
-    70% {
-        box-shadow: 0 0 0 14px rgba(46, 125, 50, 0);
-    }
-    100% {
-        box-shadow: 0 0 0 0 rgba(46, 125, 50, 0);
-    }
-}
-
-/* Splash Screen Hero */
-.splash-container {
+/* Top Navigation Bar */
+.topbar-container {
+    background: #ffffff;
+    border: 2px solid #c8e6c9;
+    border-radius: 18px;
+    padding: 14px 24px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-card);
     display: flex;
-    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    min-height: 68vh;
-    text-align: center;
-    animation: fadeInUp 0.7s cubic-bezier(0.16, 1, 0.3, 1);
-    padding: 20px;
-}
-
-.splash-mascot {
-    font-size: 5rem;
-    margin-bottom: 0.5rem;
-    display: inline-block;
-    animation: floatMascot 4s ease-in-out infinite;
-    filter: drop-shadow(0 8px 12px rgba(46, 125, 50, 0.2));
-}
-
-.splash-title {
-    font-size: 3.2rem;
-    font-weight: 800;
-    color: var(--primary-dark);
-    letter-spacing: -0.02em;
-    margin-bottom: 0.2rem;
-}
-
-.splash-tamil-title {
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: var(--primary);
-    margin-bottom: 0.5rem;
-}
-
-.splash-sub {
-    font-size: 1.05rem;
-    color: var(--text-muted);
-    max-width: 580px;
-    margin-bottom: 2rem;
-    line-height: 1.5;
-}
-
-.splash-lang-pill {
-    background: var(--surface-glass);
-    border: 1.5px solid var(--border-soft);
-    padding: 12px 28px;
-    border-radius: 999px;
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: var(--primary-dark);
-    box-shadow: var(--shadow-soft);
-    margin-bottom: 2.2rem;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    backdrop-filter: blur(8px);
-}
-
-/* Modern Sticky-style Top Bar */
-.topbar-wrapper {
-    background: var(--surface-glass);
-    border: 1px solid var(--border-glass);
-    backdrop-filter: blur(12px);
-    border-radius: 16px;
-    padding: 12px 24px;
-    margin-bottom: 18px;
-    box-shadow: var(--shadow-soft);
-    animation: fadeInDown 0.5s ease-out;
+    justify-content: space-between;
 }
 
 .topbar-brand {
-    font-size: 1.4rem;
+    font-size: 1.55rem;
     font-weight: 800;
     color: var(--primary-dark);
     display: flex;
     align-items: center;
     gap: 8px;
+    letter-spacing: -0.01em;
 }
 
 .topbar-sub {
-    font-size: 0.78rem;
-    color: var(--text-muted);
-    font-weight: 500;
+    font-size: 0.82rem;
+    color: #2e7d32;
+    font-weight: 600;
 }
 
-/* Onboarding Card */
-.ob-card {
-    background: var(--surface-card);
-    border: 1.5px solid var(--border-soft);
-    border-radius: 24px;
-    padding: 36px 44px;
-    max-width: 680px;
-    margin: 0 auto;
-    box-shadow: var(--shadow-soft);
+/* ========================================================
+   HIGH-CONTRAST CHAT CONTAINERS (NEVER MERGE WITH BG)
+   ======================================================== */
+
+/* User Message Highlight Box */
+.user-msg-bubble {
+    background: var(--user-card-bg);
+    border: 2.5px solid var(--user-card-border);
+    border-left: 8px solid var(--primary-main);
+    border-radius: 18px;
+    padding: 18px 22px;
+    margin: 16px 0 20px 0;
+    box-shadow: 0 6px 18px rgba(27, 115, 50, 0.12);
+    animation: fadeInUp 0.35s ease-out;
+}
+
+.user-msg-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    border-bottom: 1.5px solid rgba(46, 125, 50, 0.2);
+    padding-bottom: 6px;
+}
+
+.user-badge {
+    background: #1b7332;
+    color: #ffffff;
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    letter-spacing: 0.3px;
+}
+
+.user-text-content {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #0d3818;
+    line-height: 1.55;
+    word-break: break-word;
+}
+
+/* Assistant (AI) Message Highlight Box */
+.ai-msg-bubble {
+    background: var(--ai-card-bg);
+    border: 2.5px solid var(--ai-card-border);
+    border-left: 8px solid #0f441c;
+    border-radius: 20px;
+    padding: 24px 26px;
+    margin: 16px 0 26px 0;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.10);
+    animation: fadeInUp 0.4s ease-out;
+}
+
+.ai-msg-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+    border-bottom: 1.5px solid #e2e8f0;
+    padding-bottom: 10px;
+}
+
+.ai-badge {
+    background: #0f441c;
+    color: #ffffff;
+    font-size: 0.84rem;
+    font-weight: 700;
+    padding: 5px 14px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.verified-pill {
+    background: #dcfce7;
+    color: #14532d;
+    border: 1px solid #86efac;
+    font-size: 0.76rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.ai-text-content {
+    font-size: 1.05rem;
+    font-weight: 450;
+    color: #1e293b;
+    line-height: 1.7;
+    word-break: break-word;
+}
+
+.ai-text-content h1, .ai-text-content h2, .ai-text-content h3 {
+    color: #134e23;
+    font-weight: 700;
+    margin-top: 14px;
+    margin-bottom: 6px;
+}
+
+.ai-text-content ul, .ai-text-content ol {
+    padding-left: 20px;
+    margin: 10px 0;
+}
+
+.ai-text-content li {
+    margin-bottom: 6px;
+}
+
+/* Dedicated Live Voice Console */
+.voice-console-card {
+    background: #ffffff;
+    border: 2.5px solid #2e7d32;
+    border-radius: 20px;
+    padding: 20px 24px;
+    margin: 18px 0;
+    box-shadow: var(--shadow-card);
     text-align: center;
-    animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.voice-console-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #134e23;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.voice-console-sub {
+    font-size: 0.85rem;
+    color: #475569;
+    margin-bottom: 14px;
+}
+
+/* Onboarding Highlight Card */
+.ob-hero-card {
+    background: #ffffff;
+    border: 2.5px solid #a7f3d0;
+    border-radius: 26px;
+    padding: 38px 46px;
+    max-width: 720px;
+    margin: 20px auto;
+    box-shadow: var(--shadow-float);
+    text-align: center;
     position: relative;
     overflow: hidden;
 }
 
-.ob-card::before {
+.ob-hero-card::before {
     content: "";
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 5px;
-    background: linear-gradient(90deg, var(--primary), #81c784, var(--accent));
+    top: 0; left: 0; right: 0;
+    height: 6px;
+    background: linear-gradient(90deg, #1b7332, #10b981, #f59e0b);
 }
 
-.ob-step-indicator {
-    display: inline-block;
-    font-size: 0.75rem;
+.ob-step-chip {
+    background: #dcfce7;
+    color: #15803d;
+    border: 1px solid #86efac;
+    font-size: 0.78rem;
     font-weight: 700;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
     text-transform: uppercase;
-    color: var(--primary);
-    background: var(--primary-light);
-    padding: 4px 14px;
+    padding: 5px 16px;
     border-radius: 999px;
-    margin-bottom: 14px;
+    display: inline-block;
+    margin-bottom: 16px;
 }
 
-.ob-question {
-    font-size: 1.45rem;
-    font-weight: 700;
-    color: var(--primary-dark);
-    line-height: 1.45;
+.ob-question-title {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #0f391b;
+    line-height: 1.4;
     margin-bottom: 22px;
 }
 
-/* Styled Info Box */
-.styled-info-box {
-    background: #f1f8e9;
-    border-left: 4px solid var(--primary);
-    padding: 14px 18px;
-    border-radius: 10px;
-    font-size: 0.92rem;
-    color: var(--primary-dark);
+.ob-doc-alert {
+    background: #f0fdf4;
+    border: 2px solid #86efac;
+    border-radius: 14px;
+    padding: 16px 20px;
     text-align: left;
-    margin: 16px 0;
-    line-height: 1.5;
+    margin: 18px 0;
+    color: #14532d;
+    font-size: 0.95rem;
+    line-height: 1.55;
 }
 
-/* Progress Bar Container */
-.stProgress > div > div > div > div {
-    background-color: var(--primary);
-    border-radius: 999px;
+/* Suggested Question Chips */
+.topic-grid-title {
+    font-size: 0.92rem;
+    font-weight: 800;
+    color: #134e23;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin: 14px 0 8px 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
-/* Buttons Styling */
 div.stButton > button {
-    border-radius: 12px;
-    font-weight: 600;
-    padding: 10px 20px;
-    transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-    border: 1px solid rgba(46, 125, 50, 0.25);
+    border-radius: 14px !important;
+    font-weight: 700 !important;
+    padding: 12px 20px !important;
+    font-size: 0.98rem !important;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    border: 1.5px solid #a7f3d0 !important;
+    background-color: #ffffff !important;
+    color: #134e23 !important;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.04) !important;
 }
 
 div.stButton > button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 18px rgba(46, 125, 50, 0.18);
-    border-color: var(--primary);
+    transform: translateY(-2px) !important;
+    border-color: #1b7332 !important;
+    box-shadow: 0 8px 20px rgba(27, 115, 50, 0.20) !important;
+    background-color: #f0fdf4 !important;
+    color: #0f391b !important;
 }
 
-/* Suggested Question Pills */
-.suggested-section-title {
-    font-size: 0.92rem;
-    font-weight: 700;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 10px;
+div.stButton > button[kind="primary"] {
+    background: linear-gradient(135deg, #1b7332 0%, #134e23 100%) !important;
+    color: #ffffff !important;
+    border: none !important;
+    box-shadow: 0 4px 14px rgba(19, 78, 35, 0.28) !important;
 }
 
-/* Chat bubble styling */
-[data-testid="stChatMessage"] {
-    border-radius: 16px;
-    padding: 14px 18px;
-    margin-bottom: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-    animation: fadeInUp 0.4s ease-out;
+div.stButton > button[kind="primary"]:hover {
+    background: linear-gradient(135deg, #228c3d 0%, #175d2b 100%) !important;
+    color: #ffffff !important;
+}
+
+/* Chat Input Bar Highlight */
+[data-testid="stChatInput"] {
+    border-radius: 18px !important;
+    border: 2px solid #1b7332 !important;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08) !important;
+    background: #ffffff !important;
+}
+
+[data-testid="stChatInput"]:focus-within {
+    border-color: #0f441c !important;
+    box-shadow: 0 0 0 4px rgba(27, 115, 50, 0.2) !important;
+}
+
+/* Source Expander */
+[data-testid="stExpander"] {
+    background: #ffffff !important;
+    border: 1.5px solid #cbd5e1 !important;
+    border-radius: 12px !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03) !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -301,14 +406,14 @@ def get_rag_engine():
 # MULTILINGUAL SCRIPT & CONVERSATION CONTENT
 # ============================================================
 SCRIPT = {
-    "welcome_voice_en": "Welcome to Uzhavar AI. Please select your language — English or Tamil.",
+    "welcome_voice_en": "Welcome to Uzhavar AI. Please choose your language — English or Tamil.",
     "welcome_voice_ta": "உழவர் AI-க்கு வரவேற்கிறோம். தயவுசெய்து உங்கள் மொழியை தேர்ந்தெடுங்கள் — ஆங்கிலம் அல்லது தமிழ்.",
     "intro": {
         "English": (
             "Welcome to Uzhavar AI — your personal farming guide for Tamil Nadu. "
             "I will ask you a few quick questions to personalize your experience. "
-            "You can speak your answers or type them using the text box. "
-            "You can switch between voice and text at any time using the buttons at the top of the screen."
+            "You can speak your answers or type them. "
+            "You can switch between voice and text anytime using the top bar."
         ),
         "Tamil": (
             "உழவர் AI-க்கு வரவேற்கிறோம். இது தமிழ்நாடு விவசாயிகளுக்கான உங்கள் தனிப்பட்ட வழிகாட்டி. "
@@ -373,8 +478,8 @@ SCRIPT = {
 
 LABELS = {
     "English": {
-        "begin": "▶ Begin Guidance",
-        "next": "Next →",
+        "begin": "▶ Begin Consultation",
+        "next": "Next Step →",
         "male": "👨 Male",
         "female": "👩 Female",
         "other": "⚧ Other",
@@ -382,42 +487,45 @@ LABELS = {
         "new_farmer": "🌱 I am Starting Fresh",
         "has_docs": "✅ Yes, I have them ready",
         "no_docs": "📋 No / Arranging them",
-        "use_answer": "✓ Confirm Answer",
+        "use_answer": "✓ Send Spoken Question",
         "type_label": "Or type your answer below:",
         "type_placeholder": "Type here...",
-        "confirm": "Confirm →",
-        "chat_placeholder": "Ask any farming question (e.g., 'How to control fall armyworm in maize?')...",
-        "voice_hint": "🎤 Tap mic → speak → confirm",
+        "confirm": "Confirm Answer →",
+        "chat_placeholder": "Ask any farming question (e.g., 'What machinery is required for 2 acres paddy?')...",
+        "voice_hint": "🎤 Tap mic → speak in English or Tamil → Send",
         "mode_voice": "🎤 Voice Mode",
         "mode_text": "💬 Text Mode",
-        "lang_toggle": "🌐 Language",
-        "suggested": "💡 Suggested Farming Questions",
-        "reset": "🗑️ Reset Conversation",
-        "sources_label": "📚 Verified Agricultural Knowledge Sources",
+        "lang_toggle": "Language",
+        "suggested": "💡 Recommended Farming Questions",
+        "reset": "🔄 New Conversation",
+        "sources_label": "📚 Verified Agricultural Sources (ICAR & TNAU)",
         "spinner": "🔍 Consulting verified agricultural guides & ICAR manuals...",
+        "listen_btn": "🔊 Read Aloud",
         "q1": "🌱 How do I start farming?",
         "q2": "🌾 What crop should I grow?",
         "q3": "🚜 What machinery do I need?",
         "q4": "💧 How to install drip irrigation?",
         "q5": "🐛 How to control pests & weeds?",
         "q6": "🧪 How to test soil health?",
-        "q1_full": "How do I start farming? What are the key first steps?",
-        "q2_full": "What crop should I grow? Help me choose the right crop for my region.",
+        "q1_full": "How do I start farming? What are the key first steps for land and crop?",
+        "q2_full": "What crop should I grow? Help me choose the right crop based on season and soil.",
         "q3_full": "What farm machinery do I need and how do I use it effectively?",
         "q4_full": "How can I install drip irrigation? How much water does it save?",
         "q5_full": "What are the best methods to control pests and weeds in my farm?",
         "q6_full": "How do I conduct soil testing and prepare my land before sowing?",
         "step_label": "Farmer Profile Setup",
         "tap_mic": "Tap mic to speak",
-        "listening": "Listening...",
-        "got_it": "Captured! Tap Confirm to proceed.",
-        "try_again": "Could not catch that. Tap mic to retry.",
+        "listening": "Listening... Speak clearly in Tamil or English",
+        "got_it": "Speech captured! Click Send below.",
+        "try_again": "Could not hear clearly. Tap mic to retry.",
         "no_support": "Voice input not supported in this browser. Please type.",
         "age_label": "Your age in years:",
+        "your_question": "Your Question:",
+        "ai_guidance": "Uzhavar AI Guidance",
     },
     "Tamil": {
         "begin": "▶ வழிகாட்டலை தொடங்கு",
-        "next": "அடுத்து →",
+        "next": "அடுத்த படி →",
         "male": "👨 ஆண்",
         "female": "👩 பெண்",
         "other": "⚧ பிற",
@@ -425,38 +533,41 @@ LABELS = {
         "new_farmer": "🌱 புதிதாக தொடங்குகிறேன்",
         "has_docs": "✅ ஆம், தயார் நிலையில் உள்ளன",
         "no_docs": "📋 இல்லை / ஏற்பாடு செய்கிறேன்",
-        "use_answer": "✓ பதிலை உறுதிப்படுத்து",
+        "use_answer": "✓ பேசிய கேள்வியை அனுப்பு",
         "type_label": "அல்லது கீழே தட்டச்சு செய்யவும்:",
         "type_placeholder": "இங்கே எழுதவும்...",
-        "confirm": "உறுதிப்படுத்து →",
-        "chat_placeholder": "விவசாய கேள்வியை கேளுங்கள் (எ.கா: 'மக்காச்சோளத்தில் படைப்புழு கட்டுப்பாடு எப்படி?')...",
-        "voice_hint": "🎤 மைக் தட்டவும் → பேசவும் → உறுதிப்படுத்தவும்",
+        "confirm": "பதிலை உறுதிப்படுத்து →",
+        "chat_placeholder": "விவசாய கேள்வியை கேளுங்கள் (எ.கா: '2 ஏக்கர் நெல்லுக்கு என்ன இயந்திரங்கள் தேவை?')...",
+        "voice_hint": "🎤 மைக் தட்டவும் → தமிழில் பேசவும் → அனுப்பு",
         "mode_voice": "🎤 குரல் பயன்முறை",
         "mode_text": "💬 உரை பயன்முறை",
-        "lang_toggle": "🌐 மொழி",
+        "lang_toggle": "மொழி",
         "suggested": "💡 பரிந்துரைக்கப்பட்ட விவசாய கேள்விகள்",
-        "reset": "🗑️ உரையாடலை மீட்டமை",
-        "sources_label": "📚 சரிபார்க்கப்பட்ட விவசாய குறிப்புகள் & புத்தகங்கள்",
+        "reset": "🔄 புதிய உரையாடல்",
+        "sources_label": "📚 சரிபார்க்கப்பட்ட விவசாய குறிப்புகள் & நூல்கள்",
         "spinner": "🔍 விவசாய வழிகாட்டிகள் & ICAR குறிப்புகளை ஆய்வு செய்கிறேன்...",
+        "listen_btn": "🔊 வாசித்து கேள்",
         "q1": "🌱 விவசாயம் எப்படி தொடங்குவது?",
         "q2": "🌾 என்ன பயிர் விளைவிக்கலாம்?",
         "q3": "🚜 என்ன இயந்திரங்கள் தேவை?",
         "q4": "💧 சொட்டு நீர் பாசனம் அமைப்பது எப்படி?",
         "q5": "🐛 பூச்சி & களை கட்டுப்பாடு எப்படி?",
         "q6": "🧪 மண் பரிசோதனை செய்வது எப்படி?",
-        "q1_full": "விவசாயம் எப்படி தொடங்குவது? நிலத்தில் செய்ய வேண்டிய முதல் படிகள் என்ன?",
-        "q2_full": "என்ன பயிர் விளைவிக்கலாம்? என் நிலத்திற்கு உகந்த பயிரை பரிந்துரைக்கவும்.",
-        "q3_full": "என்ன விவசாய இயந்திரங்கள் தேவை மற்றும் அவற்றை எவ்வாறு பயன்படுத்துவது?",
+        "q1_full": "விவசாயம் எப்படி தொடங்குவது? நிலத்தில் செய்ய வேண்டிய முதல் முக்கிய படிகள் என்ன?",
+        "q2_full": "என்ன பயிர் விளைவிக்கலாம்? பருவம் மற்றும் மண்ணுக்கு ஏற்ற பயிரை பரிந்துரைக்கவும்.",
+        "q3_full": "என்ன விவசாய இயந்திரங்கள் தேவை மற்றும் அவற்றை எவ்வாறு சிக்கனமாக பயன்படுத்துவது?",
         "q4_full": "சொட்டு நீர் பாசனம் எப்படி அமைப்பது? எவ்வளவு தண்ணீர் மிச்சமாகும்?",
-        "q5_full": "என் பண்ணையில் பூச்சி மற்றும் களைகளை கட்டுப்படுத்த சிறந்த வழிகள் என்ன?",
+        "q5_full": "என் பண்ணையில் பூச்சி மற்றும் களைகளை கட்டுப்படுத்த சிறந்த முறைகள் என்ன?",
         "q6_full": "விதைப்பதற்கு முன் மண் பரிசோதனை செய்வது எப்படி? நிலத்தை எப்படி பண்படுத்துவது?",
         "step_label": "உழவர் விவர பதிவு",
         "tap_mic": "பேச மைக்கை தட்டவும்",
-        "listening": "கேட்கிறேன்...",
-        "got_it": "பதிவானது! தொடர உறுதிப்படுத்தவும்.",
-        "try_again": "மீண்டும் முயற்சிக்க மைக்கை தட்டவும்.",
+        "listening": "கேட்கிறேன்... தமிழில் தெளிவாக பேசுங்கள்",
+        "got_it": "குரல் பதிவானது! கீழே அனுப்பு பொத்தானை அழுத்தவும்.",
+        "try_again": "தெளிவாக கேட்கவில்லை. மீண்டும் மைக்கை தட்டி பேசவும்.",
         "no_support": "இந்த உலாவியில் குரல் ஆதரிக்கப்படவில்லை. கீழே தட்டச்சு செய்யவும்.",
         "age_label": "உங்கள் வயது:",
+        "your_question": "உங்கள் கேள்வி:",
+        "ai_guidance": "உழவர் AI வழிகாட்டல்",
     },
 }
 
@@ -471,23 +582,44 @@ _INITIAL_STATE = {
     "messages": [],
     "completion_spoken": False,
     "last_tts_key": None,
+    "tts_auto_play_idx": None,
 }
 for key, default in _INITIAL_STATE.items():
     if key not in st.session_state:
         st.session_state[key] = default
 
 # ============================================================
-# TEXT-TO-SPEECH (TTS) VIA WEB SPEECH API
+# TEXT-TO-SPEECH (TTS) CLEANER & WEB SPEECH ENGINE
 # ============================================================
+def clean_for_speech(text: str) -> str:
+    """Strips markdown asterisks, underscores, headers, and code so TTS speaks naturally."""
+    if not text:
+        return ""
+    # Remove markdown links: [label](url) -> label
+    t = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', text)
+    # Remove code blocks
+    t = re.sub(r'```.*?```', '', t, flags=re.DOTALL)
+    # Strip markdown symbols
+    for ch in ['*', '_', '#', '`', '~', '>', '|', '•']:
+        t = t.replace(ch, '')
+    # Remove HTML tags
+    t = re.sub(r'<[^>]+>', '', t)
+    # Remove list bullet markers like - or + at start of lines
+    t = re.sub(r'^\s*[-+]\s+', '', t, flags=re.MULTILINE)
+    # Collapse multiple spaces and newlines into clean sentences
+    t = re.sub(r'\s+', ' ', t).strip()
+    return t
+
 def trigger_tts(text: str, lang: str, key: str):
-    """Speaks text using browser SpeechSynthesis, executed only once per unique key."""
+    """Speaks clean text without asterisks or markdown symbols."""
     if st.session_state.last_tts_key == key:
         return
     st.session_state.last_tts_key = key
+    clean_text = clean_for_speech(text)
     lang_code = "ta-IN" if lang == "Tamil" else "en-IN"
-    escaped_text = json.dumps(text)
+    escaped_text = json.dumps(clean_text)
 
-    components.html(f"""
+    st.iframe(f"""
     <script>
     (function() {{
         var synth = window.speechSynthesis;
@@ -506,10 +638,146 @@ def trigger_tts(text: str, lang: str, key: str):
         synth.getVoices().length ? speakNow() : synth.addEventListener('voiceschanged', speakNow, {{once: true}});
     }})();
     </script>
-    """, height=0, key=f"__tts_{key}")
+    """, height=1)
+
+def render_audio_player(text: str, lang: str, auto_play: bool = False, player_id: str = "player"):
+    """Interactive Audio Control Bar with Play, Pause, Resume, and Stop controls."""
+    clean_text = clean_for_speech(text)
+    escaped_text = json.dumps(clean_text)
+    lang_code = "ta-IN" if lang == "Tamil" else "en-IN"
+
+    play_label = "🔊 மீண்டும் கேள் (Play)" if lang == "Tamil" else "🔊 Listen"
+    pause_label = "⏸️ இடைநிறுத்து (Pause)" if lang == "Tamil" else "⏸️ Pause"
+    resume_label = "▶️ தொடர் (Resume)" if lang == "Tamil" else "▶️ Resume"
+    stop_label = "⏹️ நிறுத்து (Stop)" if lang == "Tamil" else "⏹️ Stop"
+    idle_label = "🔊 ஆடியோ கட்டுப்பாடு" if lang == "Tamil" else "🔊 Voice Player"
+    auto_start_js = "true" if auto_play else "false"
+
+    player_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <meta charset="utf-8">
+    <style>
+    body {{
+        margin: 0;
+        padding: 4px 0;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        background: transparent;
+    }}
+    .player-wrap {{
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: #ffffff;
+        border: 2px solid #86efac;
+        padding: 6px 14px;
+        border-radius: 999px;
+        box-shadow: 0 2px 8px rgba(27, 115, 50, 0.08);
+    }}
+    .p-btn {{
+        background: #f0fdf4;
+        border: 1.5px solid #bbf7d0;
+        color: #166534;
+        font-size: 0.88rem;
+        font-weight: 700;
+        padding: 6px 13px;
+        border-radius: 999px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        transition: all 0.18s ease;
+    }}
+    .p-btn:hover {{
+        background: #166534;
+        color: #ffffff;
+        border-color: #166534;
+        transform: translateY(-1px);
+    }}
+    .p-status {{
+        font-size: 0.82rem;
+        font-weight: 700;
+        color: #15803d;
+        margin-left: 6px;
+        min-width: 110px;
+    }}
+    </style>
+    </head>
+    <body>
+    <div class="player-wrap">
+        <button class="p-btn" onclick="startSpeech()">{play_label}</button>
+        <button class="p-btn" onclick="pauseSpeech()">{pause_label}</button>
+        <button class="p-btn" onclick="resumeSpeech()">{resume_label}</button>
+        <button class="p-btn" onclick="stopSpeech()">{stop_label}</button>
+        <span class="p-status" id="pStatus">{idle_label}</span>
+    </div>
+    <script>
+    var synth = window.speechSynthesis;
+    var utt = null;
+    var speechText = {escaped_text};
+    var speechLang = '{lang_code}';
+
+    function buildUtterance() {{
+        var u = new SpeechSynthesisUtterance(speechText);
+        u.lang = speechLang;
+        u.rate = 0.90;
+        u.pitch = 1.02;
+        var voices = synth.getVoices();
+        var matched = voices.find(v => v.lang === speechLang)
+                   || voices.find(v => v.lang.startsWith(speechLang.substring(0, 2)));
+        if (matched) u.voice = matched;
+        u.onstart = function() {{
+            document.getElementById('pStatus').innerText = '🔊 Speaking...';
+        }};
+        u.onend = function() {{
+            document.getElementById('pStatus').innerText = '✓ Finished';
+        }};
+        u.onerror = function() {{
+            document.getElementById('pStatus').innerText = '⏹ Stopped';
+        }};
+        return u;
+    }}
+
+    function startSpeech() {{
+        synth.cancel();
+        utt = buildUtterance();
+        synth.speak(utt);
+    }}
+
+    function pauseSpeech() {{
+        if (synth.speaking && !synth.paused) {{
+            synth.pause();
+            document.getElementById('pStatus').innerText = '⏸️ Paused';
+        }}
+    }}
+
+    function resumeSpeech() {{
+        if (synth.paused) {{
+            synth.resume();
+            document.getElementById('pStatus').innerText = '🔊 Speaking...';
+        }}
+    }}
+
+    function stopSpeech() {{
+        synth.cancel();
+        document.getElementById('pStatus').innerText = '⏹️ Stopped';
+    }}
+
+    if ({auto_start_js}) {{
+        function autoRun() {{
+            startSpeech();
+        }}
+        synth.getVoices().length ? autoRun() : synth.addEventListener('voiceschanged', autoRun, {{once: true}});
+    }}
+    </script>
+    </body>
+    </html>
+    """
+    st.iframe(player_html, height=54)
 
 # ============================================================
-# VOICE CAPTURE WIDGET (STT)
+# PROMINENT LIVE VOICE CAPTURE WIDGET (STT)
 # ============================================================
 def voice_capture_widget(step_key: str, lang: str) -> str | None:
     params = st.query_params
@@ -521,84 +789,95 @@ def voice_capture_widget(step_key: str, lang: str) -> str | None:
     L = LABELS[lang]
     lang_code = "ta-IN" if lang == "Tamil" else "en-IN"
 
-    components.html(f"""
+    st.iframe(f"""
     <style>
-    .voice-wrapper {{
+    .voice-hub {{
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 10px;
+        gap: 12px;
         font-family: 'Plus Jakarta Sans', sans-serif;
+        background: #ffffff;
+        padding: 16px 20px;
+        border-radius: 18px;
+        border: 2px solid #86efac;
+        box-shadow: 0 4px 14px rgba(27, 115, 50, 0.08);
     }}
-    .mic-btn {{
-        width: 72px;
-        height: 72px;
+    .mic-button {{
+        width: 76px;
+        height: 76px;
         border-radius: 50%;
         border: none;
         cursor: pointer;
-        font-size: 2rem;
+        font-size: 2.1rem;
         color: #ffffff;
-        background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);
-        box-shadow: 0 6px 18px rgba(46, 125, 50, 0.35);
+        background: linear-gradient(135deg, #1b7332 0%, #0f441c 100%);
+        box-shadow: 0 6px 18px rgba(27, 115, 50, 0.35);
         transition: all 0.25s ease;
         display: flex;
         align-items: center;
         justify-content: center;
     }}
-    .mic-btn:hover {{
+    .mic-button:hover {{
         transform: scale(1.06);
-        box-shadow: 0 8px 24px rgba(46, 125, 50, 0.45);
+        box-shadow: 0 8px 24px rgba(27, 115, 50, 0.45);
     }}
-    .mic-btn.recording {{
-        background: linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%);
-        animation: pulseGlow 1.2s infinite;
+    .mic-button.recording {{
+        background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+        animation: pulseMic 1.2s infinite;
     }}
-    @keyframes pulseGlow {{
-        0% {{ box-shadow: 0 0 0 0 rgba(211, 47, 47, 0.5); }}
-        70% {{ box-shadow: 0 0 0 16px rgba(211, 47, 47, 0); }}
-        100% {{ box-shadow: 0 0 0 0 rgba(211, 47, 47, 0); }}
+    @keyframes pulseMic {{
+        0% {{ box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); }}
+        70% {{ box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); }}
+        100% {{ box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }}
     }}
-    .transcript-box {{
-        min-height: 40px;
-        min-width: 260px;
-        max-width: 90%;
-        background: #f1f8e9;
-        border: 1.5px solid #c8e6c9;
-        border-radius: 12px;
-        padding: 10px 16px;
+    .transcript-banner {{
+        min-height: 48px;
+        width: 90%;
+        max-width: 600px;
+        background: #fffbeb;
+        border: 2px solid #f59e0b;
+        border-radius: 14px;
+        padding: 12px 18px;
         text-align: center;
-        color: #1b5e20;
-        font-size: 1rem;
-        font-weight: 500;
+        color: #78350f;
+        font-size: 1.12rem;
+        font-weight: 700;
         word-break: break-word;
-    }}
-    .status-text {{
-        font-size: 0.85rem;
-        color: #4a5d4e;
-        font-weight: 500;
-    }}
-    .submit-voice-btn {{
+        box-shadow: 0 2px 8px rgba(245, 158, 11, 0.15);
         display: none;
-        padding: 8px 24px;
-        background: #1b5e20;
+    }}
+    .status-badge {{
+        font-size: 0.92rem;
+        color: #166534;
+        font-weight: 600;
+        background: #f0fdf4;
+        padding: 4px 16px;
+        border-radius: 999px;
+        border: 1px solid #bbf7d0;
+    }}
+    .send-voice-btn {{
+        display: none;
+        padding: 10px 28px;
+        background: linear-gradient(135deg, #1b7332 0%, #15803d 100%);
         color: #ffffff;
         border: none;
-        border-radius: 20px;
+        border-radius: 999px;
         cursor: pointer;
-        font-size: 0.95rem;
-        font-weight: 600;
-        box-shadow: 0 4px 12px rgba(27, 94, 32, 0.25);
+        font-size: 1.05rem;
+        font-weight: 700;
+        box-shadow: 0 6px 18px rgba(27, 115, 50, 0.3);
         transition: transform 0.2s ease;
     }}
-    .submit-voice-btn:hover {{
+    .send-voice-btn:hover {{
         transform: translateY(-2px);
     }}
     </style>
-    <div class="voice-wrapper">
-        <button class="mic-btn" id="micBtn" onclick="toggleRecord()">🎤</button>
-        <div class="status-text" id="statusText">{L["tap_mic"]}</div>
-        <div class="transcript-box" id="transcriptBox"></div>
-        <button class="submit-voice-btn" id="submitBtn" onclick="sendTranscript()">{L["use_answer"]}</button>
+    <div class="voice-hub">
+        <button class="mic-button" id="micBtn" onclick="toggleRecord()">🎤</button>
+        <div class="status-badge" id="statusBadge">{L["tap_mic"]}</div>
+        <div class="transcript-banner" id="transcriptBanner"></div>
+        <button class="send-voice-btn" id="sendVoiceBtn" onclick="sendTranscript()">{L["use_answer"]}</button>
     </div>
     <script>
     var recognition = null, capturedText = '', isListening = false;
@@ -608,7 +887,7 @@ def voice_capture_widget(step_key: str, lang: str) -> str | None:
     function startListening() {{
         var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SR) {{
-            document.getElementById('statusText').innerText = "{L["no_support"]}";
+            document.getElementById('statusBadge').innerText = "{L["no_support"]}";
             return;
         }}
         recognition = new SR();
@@ -621,9 +900,11 @@ def voice_capture_widget(step_key: str, lang: str) -> str | None:
         var btn = document.getElementById('micBtn');
         btn.classList.add('recording');
         btn.innerText = '⏹';
-        document.getElementById('statusText').innerText = '{L["listening"]}';
-        document.getElementById('transcriptBox').innerText = '';
-        document.getElementById('submitBtn').style.display = 'none';
+        document.getElementById('statusBadge').innerText = '{L["listening"]}';
+        var banner = document.getElementById('transcriptBanner');
+        banner.style.display = 'block';
+        banner.innerText = '...';
+        document.getElementById('sendVoiceBtn').style.display = 'none';
 
         recognition.onresult = function(e) {{
             var interim = '';
@@ -634,16 +915,16 @@ def voice_capture_widget(step_key: str, lang: str) -> str | None:
                     interim += e.results[i][0].transcript;
                 }}
             }}
-            document.getElementById('transcriptBox').innerText = capturedText || interim;
+            banner.innerText = capturedText || interim;
         }};
 
         recognition.onend = function() {{
             isListening = false;
             btn.classList.remove('recording');
             btn.innerText = '🎤';
-            document.getElementById('statusText').innerText = capturedText ? '{L["got_it"]}' : '{L["try_again"]}';
+            document.getElementById('statusBadge').innerText = capturedText ? '{L["got_it"]}' : '{L["try_again"]}';
             if (capturedText) {{
-                document.getElementById('submitBtn').style.display = 'inline-block';
+                document.getElementById('sendVoiceBtn').style.display = 'inline-block';
             }}
         }};
 
@@ -651,7 +932,7 @@ def voice_capture_widget(step_key: str, lang: str) -> str | None:
             isListening = false;
             btn.classList.remove('recording');
             btn.innerText = '🎤';
-            document.getElementById('statusText').innerText = '{L["try_again"]}';
+            document.getElementById('statusBadge').innerText = '{L["try_again"]}';
         }};
 
         recognition.start();
@@ -665,7 +946,7 @@ def voice_capture_widget(step_key: str, lang: str) -> str | None:
         window.parent.location.href = loc.toString();
     }}
     </script>
-    """, height=180, key=f"__stt_{step_key}_{int(time.time()*100)%1000}")
+    """, height=220)
     return None
 
 # ============================================================
@@ -675,18 +956,18 @@ def render_topbar():
     lang = st.session_state.language
     L = LABELS[lang]
 
-    st.markdown('<div class="topbar-wrapper">', unsafe_allow_html=True)
-    c1, c2, c3 = st.columns([4, 3, 3])
+    c1, c2, c3, c4 = st.columns([4, 2.5, 2.5, 1.5])
 
     with c1:
         st.markdown(
-            '<div class="topbar-brand">🌾 Uzhavar AI &nbsp;<span style="color:#2e7d32; font-weight:600;">உழவர் AI</span></div>'
-            '<div class="topbar-sub">Digital Farming Guide & Agronomic Assistant · Tamil Nadu</div>',
+            '<div style="font-size: 1.6rem; font-weight: 800; color: #134e23; display: flex; align-items: center; gap: 8px;">'
+            '🌾 Uzhavar AI &nbsp;<span style="color:#1b7332; font-weight:700;">· உழவர் AI</span></div>'
+            '<div style="font-size: 0.84rem; color: #166534; font-weight: 600;">Grounded Agronomic & Farming Advisory Platform</div>',
             unsafe_allow_html=True
         )
 
     with c2:
-        st.caption(f"**{L['lang_toggle']}**")
+        st.caption(f"**🌐 {L['lang_toggle']}**")
         la, lb = st.columns(2)
         with la:
             st.button(
@@ -706,7 +987,7 @@ def render_topbar():
             )
 
     with c3:
-        st.caption(f"**{L['mode_voice']} / {L['mode_text']}**")
+        st.caption(f"**🎛️ Interaction Mode**")
         va, vb = st.columns(2)
         with va:
             st.button(
@@ -725,7 +1006,14 @@ def render_topbar():
                 on_click=set_voice_mode, args=(False,)
             )
 
-    st.markdown('</div>', unsafe_allow_html=True)
+    with c4:
+        st.caption("**Options**")
+        if st.button(L["reset"], key="top_reset_btn", use_container_width=True):
+            st.session_state.messages = []
+            st.session_state.completion_spoken = False
+            st.rerun()
+
+    st.markdown("<hr style='margin: 10px 0 18px 0; border: none; border-top: 2px solid #cbd5e1;'>", unsafe_allow_html=True)
 
 def set_app_language(lang_val: str):
     st.session_state.language = lang_val
@@ -754,15 +1042,15 @@ def render_dual_input(step_key: str, lang: str) -> str | None:
         with v_col:
             result = voice_capture_widget(step_key, lang)
         with t_col:
-            st.markdown(f"<div style='font-size:0.88rem; font-weight:600; color:#2e7d32; margin-bottom:6px;'>{L['type_label']}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='font-size:0.95rem; font-weight:700; color:#134e23; margin-bottom:8px;'>{L['type_label']}</div>", unsafe_allow_html=True)
             with st.form(f"form_{step_key}"):
                 val = st.text_input("", placeholder=L["type_placeholder"], label_visibility="collapsed", key=f"inp_{step_key}")
-                if st.form_submit_button(L["confirm"], use_container_width=True) and val.strip():
+                if st.form_submit_button(L["confirm"], use_container_width=True, type="primary") and val.strip():
                     result = val.strip()
     else:
         with st.form(f"form_text_{step_key}"):
             val = st.text_input(L["type_label"], placeholder=L["type_placeholder"], key=f"inp_t_{step_key}")
-            if st.form_submit_button(L["next"], use_container_width=True) and val.strip():
+            if st.form_submit_button(L["next"], use_container_width=True, type="primary") and val.strip():
                 result = val.strip()
 
     return result
@@ -783,13 +1071,13 @@ def complete_onboarding():
 # VIEW 1: LANGUAGE SELECTION SPLASH
 # ============================================================
 def view_language_splash():
-    components.html("""
+    st.iframe("""
     <script>
     (function() {
         var s = window.speechSynthesis;
         s.cancel();
         function playPrompt() {
-            var en = new SpeechSynthesisUtterance("Welcome to Uzhavar AI. Please select your language — English or Tamil.");
+            var en = new SpeechSynthesisUtterance("Welcome to Uzhavar AI. Please choose your language — English or Tamil.");
             en.lang = 'en-IN'; en.rate = 0.88;
             var ta = new SpeechSynthesisUtterance("உழவர் AI-க்கு வரவேற்கிறோம். தயவுசெய்து உங்கள் மொழியை தேர்ந்தெடுங்கள் — ஆங்கிலம் அல்லது தமிழ்.");
             ta.lang = 'ta-IN'; ta.rate = 0.88;
@@ -799,18 +1087,18 @@ def view_language_splash():
         s.getVoices().length ? playPrompt() : s.addEventListener('voiceschanged', playPrompt, {once:true});
     })();
     </script>
-    """, height=0, key="splash_audio_init")
+    """, height=1)
 
     st.markdown("""
-    <div class="splash-container">
-        <div class="splash-mascot">🌾</div>
-        <div class="splash-title">Uzhavar AI</div>
-        <div class="splash-tamil-title">உழவர் AI — தமிழ்நாட்டின் டிஜிட்டல் உழவன் வழிகாட்டி</div>
-        <div class="splash-sub">
-            Your conversational digital companion for crops, land preparation, machinery, and smart agricultural practices.
+    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:65vh; text-align:center; padding:20px;">
+        <div style="font-size: 5.5rem; margin-bottom: 0.5rem; filter: drop-shadow(0 8px 16px rgba(27,115,50,0.25)); animation: gentleFloat 3s infinite ease-in-out;">🌾</div>
+        <div style="font-size: 3.4rem; font-weight: 800; color: #134e23; letter-spacing: -0.02em;">Uzhavar AI</div>
+        <div style="font-size: 1.6rem; font-weight: 700; color: #1b7332; margin-bottom: 0.6rem;">உழவர் AI — தமிழ்நாட்டின் டிஜிட்டல் உழவன் வழிகாட்டி</div>
+        <div style="font-size: 1.1rem; color: #334155; max-width: 600px; margin-bottom: 2rem; line-height: 1.6; font-weight: 500;">
+            Conversational agricultural guidance for crops, soil, machinery, irrigation, and pest management.
         </div>
-        <div class="splash-lang-pill">
-            🔊 Please Choose Your Language &nbsp;•&nbsp; மொழியை தேர்வு செய்யவும்
+        <div style="background: #ffffff; border: 2.5px solid #86efac; border-radius: 999px; padding: 12px 32px; font-size: 1.15rem; font-weight: 700; color: #14532d; box-shadow: 0 6px 20px rgba(0,0,0,0.06); margin-bottom: 2.2rem;">
+            🔊 Choose Your Language &nbsp;•&nbsp; மொழியை தேர்வு செய்யவும்
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -849,13 +1137,13 @@ def view_onboarding():
         _, center, _ = st.columns([1, 4, 1])
         with center:
             st.markdown(f"""
-            <div class="ob-card">
-                <div style="font-size: 3.5rem; margin-bottom: 10px;">🌾</div>
-                <div class="ob-question">
+            <div class="ob-hero-card">
+                <div style="font-size: 4rem; margin-bottom: 10px;">🌾</div>
+                <div class="ob-question-title">
                     {"Welcome to Uzhavar AI — your personal farming guide for Tamil Nadu." if lang == "English"
                      else "உழவர் AI-க்கு வரவேற்கிறோம் — தமிழ்நாட்டு விவசாயிகளுக்கான உங்கள் தனிப்பட்ட வழிகாட்டி."}
                 </div>
-                <p style="color: #4a5d4e; font-size: 1rem; line-height: 1.6;">
+                <p style="color: #334155; font-size: 1.08rem; line-height: 1.7; font-weight: 500;">
                     {"I will ask a few quick questions to personalize your farming advice. You can speak your answers or type them. You can switch between voice and text anytime using the top bar." if lang == "English"
                      else "உங்கள் விவசாய சூழலுக்கு ஏற்ப வழிகாட்ட சில எளிய கேள்விகள் கேட்கிறேன். நீங்கள் பேசியோ தட்டச்சு செய்தோ பதிலளிக்கலாம். மேல்பட்டியில் இருந்து எப்போது வேண்டுமானாலும் முறையை மாற்றலாம்."}
                 </p>
@@ -876,9 +1164,9 @@ def view_onboarding():
         _, center, _ = st.columns([1, 4, 1])
         with center:
             st.markdown(f"""
-            <div class="ob-card">
-                <div class="ob-step-indicator">Step 1 of 5</div>
-                <div class="ob-question">👤 &nbsp; {question}</div>
+            <div class="ob-hero-card">
+                <div class="ob-step-chip">Step 1 of 5</div>
+                <div class="ob-question-title">👤 &nbsp; {question}</div>
             </div>
             """, unsafe_allow_html=True)
             st.markdown("")
@@ -896,9 +1184,9 @@ def view_onboarding():
         _, center, _ = st.columns([1, 4, 1])
         with center:
             st.markdown(f"""
-            <div class="ob-card">
-                <div class="ob-step-indicator">Step 2 of 5</div>
-                <div class="ob-question">🎂 &nbsp; {question}</div>
+            <div class="ob-hero-card">
+                <div class="ob-step-chip">Step 2 of 5</div>
+                <div class="ob-question-title">🎂 &nbsp; {question}</div>
             </div>
             """, unsafe_allow_html=True)
             st.markdown("")
@@ -916,16 +1204,18 @@ def view_onboarding():
                             st.rerun()
                 with t_col:
                     with st.form("form_age"):
-                        age_num = st.number_input(L["age_label"], min_value=15, max_value=100, value=35, step=1)
-                        if st.form_submit_button(L["confirm"], use_container_width=True):
+                        st.markdown(f"<div style='font-size:0.95rem; font-weight:700; color:#134e23; margin-bottom:8px;'>{L['age_label']}</div>", unsafe_allow_html=True)
+                        age_num = st.number_input("", min_value=15, max_value=100, value=35, step=1, label_visibility="collapsed")
+                        if st.form_submit_button(L["confirm"], use_container_width=True, type="primary"):
                             info["age"] = str(age_num)
                             st.session_state.onboarding_step = "gender"
                             st.session_state.last_tts_key = None
                             st.rerun()
             else:
                 with st.form("form_age_text"):
-                    age_num = st.number_input(L["age_label"], min_value=15, max_value=100, value=35, step=1)
-                    if st.form_submit_button(L["next"], use_container_width=True):
+                    st.markdown(f"<div style='font-size:0.95rem; font-weight:700; color:#134e23; margin-bottom:8px;'>{L['age_label']}</div>", unsafe_allow_html=True)
+                    age_num = st.number_input("", min_value=15, max_value=100, value=35, step=1, label_visibility="collapsed")
+                    if st.form_submit_button(L["next"], use_container_width=True, type="primary"):
                         info["age"] = str(age_num)
                         st.session_state.onboarding_step = "gender"
                         st.session_state.last_tts_key = None
@@ -938,9 +1228,9 @@ def view_onboarding():
         _, center, _ = st.columns([1, 4, 1])
         with center:
             st.markdown(f"""
-            <div class="ob-card">
-                <div class="ob-step-indicator">Step 3 of 5</div>
-                <div class="ob-question">🧑 &nbsp; {question}</div>
+            <div class="ob-hero-card">
+                <div class="ob-step-chip">Step 3 of 5</div>
+                <div class="ob-question-title">🧑 &nbsp; {question}</div>
             </div>
             """, unsafe_allow_html=True)
             st.markdown("")
@@ -971,9 +1261,9 @@ def view_onboarding():
         _, center, _ = st.columns([1, 4, 1])
         with center:
             st.markdown(f"""
-            <div class="ob-card">
-                <div class="ob-step-indicator">Step 4 of 5</div>
-                <div class="ob-question">🌱 &nbsp; {question}</div>
+            <div class="ob-hero-card">
+                <div class="ob-step-chip">Step 4 of 5</div>
+                <div class="ob-question-title">🌱 &nbsp; {question}</div>
             </div>
             """, unsafe_allow_html=True)
             st.markdown("")
@@ -985,7 +1275,7 @@ def view_onboarding():
                     st.session_state.last_tts_key = None
                     st.rerun()
             with f_col2:
-                if st.button(L["new_farmer"], use_container_width=True, key="ft_new", type="secondary"):
+                if st.button(L["new_farmer"], use_container_width=True, key="ft_new"):
                     info["farmer_type"] = "new"
                     st.session_state.onboarding_step = "docs"
                     st.session_state.last_tts_key = None
@@ -1001,38 +1291,38 @@ def view_onboarding():
         _, center, _ = st.columns([1, 4, 1])
         with center:
             st.markdown(f"""
-            <div class="ob-card">
-                <div class="ob-step-indicator">Step 5 of 5</div>
-                <div class="ob-question">📄 &nbsp; {question}</div>
+            <div class="ob-hero-card">
+                <div class="ob-step-chip">Step 5 of 5</div>
+                <div class="ob-question-title">📄 &nbsp; {question}</div>
             </div>
             """, unsafe_allow_html=True)
 
             if lang == "English":
                 doc_summary = (
-                    "**Key Agricultural Documents for TN Farmers:**<br>"
+                    "<b>Key Agricultural Documents for TN Farmers:</b><br>"
                     "• Patta / Chitta / Adangal (Land Ownership & Cultivation Record)<br>"
                     "• Aadhaar Card & Farmer ID / PPB Book<br>"
                     "• Active Bank Passbook linked with Aadhaar"
                     if is_existing else
-                    "**Initial Documents for New Farmers:**<br>"
+                    "<b>Initial Documents for New Farmers:</b><br>"
                     "• Aadhaar Card & Ration Card<br>"
                     "• Land Title (Patta) or Registered Lease Deed<br>"
                     "• Bank Account Details"
                 )
             else:
                 doc_summary = (
-                    "**தமிழ்நாடு விவசாயிகளுக்கான முக்கிய ஆவணங்கள்:**<br>"
+                    "<b>தமிழ்நாடு விவசாயிகளுக்கான முக்கிய ஆவணங்கள்:</b><br>"
                     "• பட்டா / சிட்டா / அடங்கல் (நில உரிமை மற்றும் சாகுபடி சான்று)<br>"
                     "• ஆதார் அட்டை மற்றும் உழவர் அடையாள அட்டை<br>"
                     "• ஆதாருடன் இணைக்கப்பட்ட வங்கி கணக்கு புத்தகம்"
                     if is_existing else
-                    "**புதிய விவசாயிகளுக்கான தொடக்க ஆவணங்கள்:**<br>"
+                    "<b>புதிய விவசாயிகளுக்கான தொடக்க ஆவணங்கள்:</b><br>"
                     "• ஆதார் அட்டை மற்றும் குடும்ப அட்டை<br>"
                     "• நில உரிமை ஆவணம் (பட்டா) அல்லது குத்தகை ஒப்பந்தம்<br>"
                     "• வங்கி கணக்கு விவரங்கள்"
                 )
 
-            st.markdown(f'<div class="styled-info-box">{doc_summary}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="ob-doc-alert">{doc_summary}</div>', unsafe_allow_html=True)
 
             d_col1, d_col2 = st.columns(2)
             with d_col1:
@@ -1040,7 +1330,7 @@ def view_onboarding():
                     info["has_docs"] = True
                     complete_onboarding()
             with d_col2:
-                if st.button(L["no_docs"], use_container_width=True, key="doc_no", type="secondary"):
+                if st.button(L["no_docs"], use_container_width=True, key="doc_no"):
                     info["has_docs"] = False
                     complete_onboarding()
 
@@ -1065,14 +1355,14 @@ def view_main_chat():
         has_docs = info.get("has_docs", True)
 
         if lang == "English":
-            greeting = f"Vanakkam **{farmer_name}**! 🙏 I am **Uzhavar AI**, your digital agronomic companion.\n\n"
+            greeting = f"Vanakkam **{farmer_name}**! 🙏 I am **Uzhavar AI**, your verified agricultural guide.\n\n"
             if is_existing:
-                greeting += "As an active farmer, I am here to help you with crop health, drip irrigation, machinery selection, fertilizer calculation, and pest control techniques."
+                greeting += "As an experienced farmer, I am ready to advise you on crop health, drip irrigation, machinery selection, seed treatment, and integrated pest control."
             else:
-                greeting += "Since you are starting your farming journey, I will guide you step-by-step through land preparation, soil testing, seed selection, and first-season crop management."
+                greeting += "Since you are starting your farming journey, I will guide you step-by-step through land preparation, soil testing, seed selection, and cultivation techniques."
             if not has_docs:
-                greeting += "\n\n💡 *Tip: Having your Patta and Chitta updated will help smooth your agricultural operations in Tamil Nadu.*"
-            greeting += "\n\n**How can I assist you in your field today?**"
+                greeting += "\n\n💡 *Note: Keeping your land Patta and Chitta updated will ensure seamless farm management in Tamil Nadu.*"
+            greeting += "\n\n**How can I help in your fields today?**"
         else:
             greeting = f"வணக்கம் **{farmer_name}**! 🙏 நான் **உழவர் AI**, உங்கள் தனிப்பட்ட விவசாய வழிகாட்டி.\n\n"
             if is_existing:
@@ -1092,8 +1382,8 @@ def view_main_chat():
     # Top Navigation Bar
     render_topbar()
 
-    # Suggested Farming Questions Section
-    st.markdown(f'<div class="suggested-section-title">{L["suggested"]}</div>', unsafe_allow_html=True)
+    # Quick Question Action Section
+    st.markdown(f'<div class="topic-grid-title">{L["suggested"]}</div>', unsafe_allow_html=True)
     q_row1 = st.columns(3)
     q_row2 = st.columns(3)
     chosen_prompt = None
@@ -1108,20 +1398,58 @@ def view_main_chat():
             if st.button(L[short_k], use_container_width=True, key=f"sq_{idx}"):
                 chosen_prompt = L[full_k]
 
-    st.markdown("<hr style='margin: 18px 0; border: none; border-top: 1px solid #e0e0e0;'>", unsafe_allow_html=True)
+    st.markdown("<hr style='margin: 18px 0; border: none; border-top: 2px solid #e2e8f0;'>", unsafe_allow_html=True)
 
-    # Chat History Display
-    for msg in st.session_state.messages:
+    # ========================================================
+    # RENDER CHAT HISTORY (HIGH-CONTRAST BUBBLES)
+    # ========================================================
+    for m_idx, msg in enumerate(st.session_state.messages):
         role = msg["role"]
-        avatar = "👨‍🌾" if role == "user" else "🌾"
-        with st.chat_message(role, avatar=avatar):
-            st.markdown(msg["content"])
+        content = msg["content"]
+
+        if role == "user":
+            # Highlighted User Question Card
+            escaped_q = html.escape(content).replace("\n", "<br>")
+            st.markdown(f"""
+            <div class="user-msg-bubble">
+                <div class="user-msg-header">
+                    <span class="user-badge">👨‍🌾 {L["your_question"]}</span>
+                    <span style="font-size:0.8rem; color:#1b7332; font-weight:700;">{farmer_name}</span>
+                </div>
+                <div class="user-text-content">{escaped_q}</div>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            # Highlighted AI Response Card
+            st.markdown(f"""
+            <div class="ai-msg-bubble">
+                <div class="ai-msg-header">
+                    <span class="ai-badge">🌾 {L["ai_guidance"]}</span>
+                    <span class="verified-pill">🛡️ ICAR & TNAU Grounded</span>
+                </div>
+                <div class="ai-text-content">
+            """, unsafe_allow_html=True)
+
+            # Markdown formatted output for the content
+            st.markdown(content)
+
+            st.markdown("</div></div>", unsafe_allow_html=True)
+
+            # Interactive Audio Player with Play, Pause, Resume, Stop controls
+            should_auto_play = (st.session_state.voice_mode and st.session_state.get("tts_auto_play_idx") == m_idx)
+            if should_auto_play:
+                st.session_state.tts_auto_play_idx = None
+            render_audio_player(content[:600], lang, auto_play=should_auto_play, player_id=f"player_{m_idx}")
+
+            # Citations list
             if msg.get("sources"):
                 with st.expander(f"{L['sources_label']} ({len(msg['sources'])})"):
                     for src in msg["sources"]:
                         st.markdown(f"• **{src['source']}** (Page {src['page']}) — *Relevance: {src['score']}*")
 
-    # Voice Input Panel (Active only in Voice Mode)
+    # ========================================================
+    # DEDICATED LIVE VOICE ASSISTANT BAR
+    # ========================================================
     voice_query = None
     if st.session_state.voice_mode:
         url_params = st.query_params
@@ -1129,8 +1457,14 @@ def view_main_chat():
             voice_query = url_params["vresult"]
             st.query_params.clear()
         else:
-            with st.expander("🎤 " + ("Speak your agricultural question" if lang == "English" else "உங்கள் கேள்வியை பேசவும்"), expanded=True):
-                voice_query = voice_capture_widget("chat", lang)
+            st.markdown(f"""
+            <div style="background:#ffffff; border:2.5px solid #2e7d32; border-radius:18px; padding:14px 20px; margin: 15px 0 10px 0; box-shadow:0 4px 16px rgba(0,0,0,0.06);">
+                <div style="font-size:1.1rem; font-weight:800; color:#134e23; margin-bottom:4px; display:flex; align-items:center; gap:8px;">
+                    🎙️ {L["mode_voice"]} — {L["voice_hint"]}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            voice_query = voice_capture_widget("chat", lang)
 
     # Text Input Bar (Always Available)
     typed_query = st.chat_input(L["chat_placeholder"])
@@ -1141,8 +1475,6 @@ def view_main_chat():
     if active_query:
         # Append user query to conversation
         st.session_state.messages.append({"role": "user", "content": active_query})
-        with st.chat_message("user", avatar="👨‍🌾"):
-            st.markdown(active_query)
 
         # Context profile dictionary
         profile_dict = {
@@ -1161,58 +1493,45 @@ def view_main_chat():
         ]
 
         # Generate Grounded Guidance
-        with st.chat_message("assistant", avatar="🌾"):
-            with st.spinner(L["spinner"]):
-                rag = get_rag_engine()
-                if rag:
-                    answer_text, contexts, _, _ = rag.answer(
-                        question=active_query,
-                        profile=profile_dict,
-                        history=chat_history,
-                        return_details=True
-                    )
-                else:
-                    answer_text = (
-                        "Uzhavar AI engine is initializing. Please verify document index configuration."
-                        if lang == "English" else
-                        "உழவர் AI தயாராகிறது. ஆவண குறியீட்டு அமைப்பை சரிபார்க்கவும்."
-                    )
-                    contexts = []
+        with st.spinner(L["spinner"]):
+            rag = get_rag_engine()
+            if rag:
+                answer_text, contexts, _, _ = rag.answer(
+                    question=active_query,
+                    profile=profile_dict,
+                    history=chat_history,
+                    return_details=True
+                )
+            else:
+                answer_text = (
+                    "Uzhavar AI engine is initializing. Please verify document index configuration."
+                    if lang == "English" else
+                    "உழவர் AI தயாராகிறது. ஆவண குறியீட்டு அமைப்பை சரிபார்க்கவும்."
+                )
+                contexts = []
 
-                st.markdown(answer_text)
+            sources_stored = [
+                {
+                    "source": c["source"],
+                    "page": c["page"],
+                    "score": round(c.get("rerank_score", c.get("score", 0.0)), 4)
+                }
+                for c in contexts
+            ]
 
-                # Voice output if Voice Mode is active
-                if st.session_state.voice_mode:
-                    trigger_tts(answer_text[:350], lang, f"ans_{int(time.time())}")
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": answer_text,
+                "sources": sources_stored
+            })
+            if st.session_state.voice_mode:
+                st.session_state.tts_auto_play_idx = len(st.session_state.messages) - 1
+            st.rerun()
 
-                # Citations
-                if contexts:
-                    with st.expander(f"{L['sources_label']} ({len(contexts)})"):
-                        for c in contexts:
-                            st.markdown(
-                                f"• **{c['source']}** (Page {c['page']}) — "
-                                f"*{round(c.get('rerank_score', c.get('score', 0.0)), 4)}*"
-                            )
-
-                sources_stored = [
-                    {
-                        "source": c["source"],
-                        "page": c["page"],
-                        "score": round(c.get("rerank_score", c.get("score", 0.0)), 4)
-                    }
-                    for c in contexts
-                ]
-
-                st.session_state.messages.append({
-                    "role": "assistant",
-                    "content": answer_text,
-                    "sources": sources_stored
-                })
-
-    # Minimal Sidebar with Reset and System Status
+    # Minimal Sidebar with System Status
     with st.sidebar:
         st.markdown("### 🌾 Uzhavar AI")
-        if st.button(L["reset"], use_container_width=True):
+        if st.button(L["reset"], use_container_width=True, key="sidebar_reset"):
             st.session_state.messages = []
             st.session_state.completion_spoken = False
             st.rerun()
@@ -1224,10 +1543,10 @@ def view_main_chat():
                 "• drip_irrigation.pdf\n"
                 "• Farm Machinery.pdf\n"
                 "• ICAR Kharif Agro-Advisories 2025\n"
-                "• Principles and Practices of Weed Management"
+                "• Weed Management Guide"
             )
             st.write("**Vector Store:** 1,353 chunks · Qdrant")
-            st.write("**Model:** Gemini 2.5 Flash")
+            st.write("**Grounded LLM:** Gemini 2.5 Flash")
 
 # ============================================================
 # APPLICATION ROUTING
