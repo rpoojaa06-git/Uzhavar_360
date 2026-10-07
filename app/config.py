@@ -15,3 +15,9 @@ RERANKER_MODEL = os.getenv("RERANKER_MODEL", "BAAI/bge-reranker-v2-m3")
 
 TOP_K = int(os.getenv("TOP_K", "8"))
 RERANK_TOP_K = int(os.getenv("RERANK_TOP_K", "4"))
+
+# Sarvam AI TTS (optional — natural Indian-language voice)
+# Add SARVAM_API_KEY to .env to enable; speaker default: shubh (bulbul:v3)
+SARVAM_API_KEY = os.getenv("SARVAM_API_KEY", "")
+SARVAM_TTS_MODEL = os.getenv("SARVAM_TTS_MODEL", "bulbul:v3")
+SARVAM_TTS_SPEAKER = os.getenv("SARVAM_TTS_SPEAKER", "shubh")

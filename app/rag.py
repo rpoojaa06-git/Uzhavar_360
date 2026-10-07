@@ -80,6 +80,40 @@ def point_id(source: str, page: int, chunk_index: int) -> str:
 
 
 class RAG:
+    # number of words after which the appended demo link block is truncated
+    LINK_BLOCK_WORD_LIMIT = 400
+
+    def _append_link_block(self, text: str, question: str, lang: Any, has_retrieval: bool) -> Tuple[str, Optional[Dict[str, Any]]]:
+        """If the question maps to a demo service (or the home page when retrieval
+        found nothing), append the clickable deep-link block to the answer.
+        Returns (answer_text, deep_link_dict_or_None). The structured dict is
+        also retained on the instance as `last_deep_link` for API layers."""
+        self.last_deep_link = None
+        try:
+            from .links_mapping import match_service, build_link_tail, spoken_instruction, service_url, _HOME_CARD
+            card = match_service(question, lang if lang else "English")
+            if card is None and not has_retrieval:
+                # No documents matched the question: point the farmer at the
+                # full demo app so the question can still lead somewhere useful.
+                card = dict(_HOME_CARD)
+            if card is not None:
+                words = text.split()
+                if len(words) > self.LINK_BLOCK_WORD_LIMIT:
+                    text = " ".join(words[: self.LINK_BLOCK_WORD_LIMIT]) + " …"
+                eff_lang = lang if lang else "English"
+                text += build_link_tail(card, eff_lang)
+                self.last_deep_link = {
+                    "id": card["id"],
+                    "label_en": card["en"],
+                    "label_ta": card["ta"],
+                    "emoji": card["emoji"],
+                    "url": service_url(card),
+                    "spoken": spoken_instruction(card, eff_lang),
+                }
+                return text, self.last_deep_link
+            return text, None
+        except Exception:
+            return text, None
 
     def __init__(self):
         if not QDRANT_URL:
@@ -286,11 +320,19 @@ class RAG:
         """
         Generates context-aware, grounded agricultural guidance with multi-turn memory
         and farming journey stage awareness.
+
+        Every return path also carries a demo deep link when the question maps to
+        a Uzhavar demo service page (deterministic keyword match, no LLM cost).
         """
+        _llm_lang = None
+        if isinstance(profile, dict):
+            _llm_lang = profile.get("language")
+
         contexts = self.retrieve(question)
 
         if not contexts:
             msg = "I could not find enough information in the trusted agricultural documents to answer this specific question."
+            msg, _ = self._append_link_block(msg, question, _llm_lang, has_retrieval=False)
             if return_details:
                 return msg, [], [], None
             return msg, []
@@ -324,6 +366,16 @@ CORE RESPONSIBILITIES:
 2. Recommend practical, actionable steps for the farmer's stage and crops.
 3. Language: If the user asks in Tamil or requested language is Tamil, respond in clear, respectful Tamil. If English, reply in English.
 4. Focus exclusively on practical farming guidance (crops, land preparation, machinery, irrigation, pest management, harvesting, soil health). Do NOT speculate on government scheme percentages without verified records.
+
+CONVERSATION STYLE (STRICT):
+- Answer like a knowledgeable agriculture extension officer in a real conversation, NOT like a letter or an essay.
+- NEVER start the reply with greetings, pleasantries or self-introductions. No "Vanakkam", "Hello", "Welcome", "I am Uzhavar AI", no restating the farmer's name. Start DIRECTLY with the substance of the answer.
+- Keep the answer SHORT and spoken-friendly: at most 120 words (about 5-6 sentences). This is read aloud to a farmer; long answers waste their time.
+- Structure: 1 short direct answer sentence, then at most 3-4 crisp bullet points with only the KEY facts, numbers and steps from the sources. Omit background theory, disclaimers, offers of further help and closing questions.
+- NEVER end with questions like "How would you like to proceed?" or offers such as "let me know if you need more help". Just end after the key points.
+- Do NOT say what the documents do not contain or apologize for missing data. If asked about something with no source (e.g. live market prices), give at most one practical sentence pointing to the right place (e.g. local Uzhavar Sandhai or e-NAM portal) and stop.
+- ALWAYS end the reply with one short line inviting the farmer's next turn, e.g. English: "What would you like to know next?" / "Shall I explain any step in detail?" or Tamil: "வேறு என்ன தெரிந்துகொள்ள வேண்டும்?" / "ஏதேனும் விவரம் வேண்டுமா?". This tells the farmer it is their turn to speak.
+- Plain text only: no markdown bold/headings/tables, no emojis. Short "- " bullets are allowed.
 FARMER PROFILE & CONTEXT:
 {profile_text}
 
@@ -339,16 +391,19 @@ RETRIEVED AGRICULTURAL SOURCES:
                 f"{c['source']} p.{c['page']}: {c['text']}"
                 for c in contexts
             )
+            fallback, _ = self._append_link_block(fallback, question, _llm_lang, has_retrieval=True)
             if return_details:
                 return fallback, contexts, [], current_stage
             return fallback, contexts
 
         prompt_content = f"{system}\n\nFarmer Question:\n{question}"
 
-        # Disable AFC in GenerateContentConfig to eliminate terminal warning
+        # Disable AFC in GenerateContentConfig to eliminate terminal warning;
+        # cap output tokens so answers stay short and voice-friendly.
         from google.genai import types
         gen_config = types.GenerateContentConfig(
             temperature=0.3,
+            max_output_tokens=320,
             automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True)
         )
 
@@ -359,6 +414,8 @@ RETRIEVED AGRICULTURAL SOURCES:
         )
 
         answer_text = response.text
+
+        answer_text, _ = self._append_link_block(answer_text, question, _llm_lang, has_retrieval=True)
 
         if return_details:
             return answer_text, contexts, [], current_stage

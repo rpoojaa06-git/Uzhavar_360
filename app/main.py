@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from typing import List, Dict, Any, Optional
-from .models import ChatRequest, ChatResponse, Source, FARMING_STAGES
+from .models import ChatRequest, ChatResponse, Source, DeepLink, FARMING_STAGES
 from .rag import RAG
 
 app = FastAPI(
@@ -54,6 +54,20 @@ def chat(request: ChatRequest):
         return_details=True
     )
 
+    # The deep link into the demo UI was already appended to `answer` by the
+    # RAG layer; the structured payload is retained on the engine instance.
+    dl = getattr(rag, "last_deep_link", None)
+    deep_link = None
+    if dl:
+        deep_link = DeepLink(
+            id=dl["id"],
+            label_en=dl["label_en"],
+            label_ta=dl["label_ta"],
+            emoji=dl["emoji"],
+            url=dl["url"],
+            spoken=dl["spoken"],
+        )
+
     return ChatResponse(
         answer=answer,
         sources=[
@@ -65,5 +79,6 @@ def chat(request: ChatRequest):
             for c in contexts
         ],
         current_stage=stage,
-        next_step_recommendation="Consult local agricultural officer or check next stage advisories."
+        next_step_recommendation="Consult local agricultural officer or check next stage advisories.",
+        deep_link=deep_link,
     )

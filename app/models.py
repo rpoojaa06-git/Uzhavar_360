@@ -55,8 +55,19 @@ class ChatRequest(BaseModel):
     history: Optional[List[ChatMessage]] = Field(default_factory=list)
 
 
+class DeepLink(BaseModel):
+    """A ready-to-open deep link into the Uzhavar demo UI."""
+    id: str                      # service id, or "home" for the app grid
+    label_en: Optional[str] = None
+    label_ta: Optional[str] = None
+    emoji: Optional[str] = None
+    url: str
+    spoken: Optional[str] = None  # instruction to be spoken/TTS'd, not the URL
+
+
 class ChatResponse(BaseModel):
     answer: str
     sources: List[Source]
     current_stage: Optional[str] = None
     next_step_recommendation: Optional[str] = None
+    deep_link: Optional[DeepLink] = None  # present when the question maps to a demo page
