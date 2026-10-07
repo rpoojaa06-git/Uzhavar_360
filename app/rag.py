@@ -263,13 +263,9 @@ class RAG:
         and farming journey stage awareness.
         """
         contexts = self.retrieve(question)
+        matched_schemes = []  # Scheme evaluation disabled until scheme RAG is indexed
 
-        # Evaluate potential scheme eligibility
-        matched_schemes = evaluate_scheme_eligibility(question, profile)
-        scheme_intent = detect_scheme_intent(question)
-        top_scheme = matched_schemes[0] if (matched_schemes and (scheme_intent or matched_schemes[0]["potential_match"] >= 75)) else None
-
-        if not contexts and not top_scheme:
+        if not contexts:
             msg = "I could not find enough information in the trusted agricultural documents to answer this specific question."
             if return_details:
                 return msg, [], [], None
@@ -308,8 +304,7 @@ CORE RESPONSIBILITIES:
 4. Recommend the logical NEXT STEP in the farmer's journey at the end of your guidance.
 5. Do NOT invent dosage, chemicals, or ungrounded claims. If data is limited in the documents, state so clearly.
 6. Language: If requested language is Tamil or user asks in Tamil, reply in clear Tamil. If English, reply in English.
-7. Government Schemes: Scheme matching is handled deterministically by the system. If government subsidies or schemes are relevant, briefly note that potential assistance may be available under government programs, and refer them to the scheme card displayed on screen. Never guarantee eligibility or official approval.
-
+7. Focus exclusively on practical farming guidance (crops, land preparation, machinery, irrigation, pest management, harvesting, soil health). Do NOT invent or speculate on government schemes or subsidy percentages.
 FARMER PROFILE & CONTEXT:
 {profile_text}
 
@@ -339,6 +334,6 @@ RETRIEVED AGRICULTURAL SOURCES:
         answer_text = response.text
 
         if return_details:
-            return answer_text, contexts, (matched_schemes if top_scheme else []), current_stage
+            return answer_text, contexts, [], current_stage
 
         return answer_text, contexts
