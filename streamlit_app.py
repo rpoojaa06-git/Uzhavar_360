@@ -16,10 +16,11 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 try:
-    from streamlit_mic_recorder import speech_to_text
+    from streamlit_mic_recorder import speech_to_text, mic_recorder
     MIC_STT_AVAILABLE = True
 except Exception:  # optional dependency — app degrades to typed input
     speech_to_text = None
+    mic_recorder = None
     MIC_STT_AVAILABLE = False
 
 import re
@@ -34,6 +35,13 @@ try:
 except Exception:
     render_sarvam_audio = None
     SARVAM_TTS = False
+
+try:
+    from app.sarvam_stt import sarvam_speech_to_text, SARVAM_STT_READY
+    SARVAM_STT = SARVAM_STT_READY
+except Exception:  # STT unavailable — voice falls back to browser speech
+    sarvam_speech_to_text = None
+    SARVAM_STT = False
 
 # ============================================================
 # PAGE CONFIGURATION
@@ -841,11 +849,34 @@ def render_audio_player(text: str, lang: str, auto_play: bool = False, player_id
 # PROMINENT LIVE VOICE CAPTURE WIDGET (STT)
 # ============================================================
 def voice_capture_widget(step_key: str, lang: str) -> str | None:
-    """One-shot speech capture for onboarding steps (returns the transcript)."""
+    """One-shot speech capture for onboarding steps (returns the transcript).
+
+    Prefers MediaRecorder capture + Sarvam STT (server-side, browser-
+    independent), falling back to the package's browser speech widget
+    (Chrome-only) when Sarvam STT is not configured.
+    """
     L = LABELS[lang]
     if not MIC_STT_AVAILABLE:
         st.caption("🎙️ " + L["no_support"])
         return None
+    if SARVAM_STT and sarvam_speech_to_text:
+        audio = mic_recorder(
+            start_prompt=L["tap_mic"],
+            stop_prompt="⏹ Stop",
+            just_once=True,
+            use_container_width=True,
+            format="wav",
+            key=f"mic_{step_key}",
+        )
+        if not audio:
+            return None
+        with st.spinner("⏳ Transcribing…" if lang == "English" else "⏳ எழுத்தாக்குகிறேன்…"):
+            text, err = sarvam_speech_to_text(audio["bytes"], lang)
+        if err:
+            st.error(err)
+            return None
+        return (text or "").strip() or None
+    # Fallback: browser-native speech recognition (Chrome only)
     lang_code = "ta-IN" if lang == "Tamil" else "en-IN"
     text = speech_to_text(
         language=lang_code,
@@ -858,159 +889,53 @@ def voice_capture_widget(step_key: str, lang: str) -> str | None:
     return (text or "").strip() or None
 
 
-def voice_console_auto(lang: str) -> None:
-    """Voice console with an EXPLICIT Stop & Send button (no auto-stop).
+def voice_console_auto(lang: str) -> str | None:
+    """Chat voice console: press 🎙 Start Recording, ask the question, then
+    press ⏹ Stop & Send — the recording is transcribed SERVER-SIDE with
+    Sarvam STT and returned for the chat pipeline.
 
-    Behavior:
-      - the mic starts when the console mounts (after each answer re-render)
-        and records CONTINUOUSLY — the farmer decides when they are finished;
-      - a live transcript panel grows as they speak (visible in the console);
-      - chrome auto-caps a recognition session (~60s): the console silently
-        restarts and APPENDS to the transcript, so recording effectively runs
-        until the farmer presses the button;
-      - ⏹ Stop & Send → stops the mic, injects the full transcript into
-        st.chat_input and submits it → the AI answers;
-      - ⏸ Pause (stop recording WITHOUT sending) / 🎙 Resume — independent.
-    The transcript flows in through st.chat_input; returns nothing.
+    Why not the browser's Web Speech API (webkitSpeechRecognition)? It is
+    Chrome-only and silently fails (e.g. 'network' error) in Edge and in
+    environments without Google's speech servers — exactly the "Start
+    Recording does nothing" bug. MediaRecorder + getUserMedia (used here)
+    work in every modern browser, and the transcription happens on the
+    server with the same Sarvam key as the voice output. No auto-record:
+    nothing captures until the farmer presses Start.
     """
     L = LABELS[lang]
     if not MIC_STT_AVAILABLE:
         st.caption("🎙️ " + L["no_support"])
-        return
+        return None
+    if not (SARVAM_STT and sarvam_speech_to_text):
+        st.caption("🎙️ " + L["no_support"])
+        return None
 
-    paused = st.session_state.get("voice_paused", False)
-    lang_code = "ta-IN" if lang == "Tamil" else "en-IN"
-    mic_label = ("🎤 Recording… press Stop when done"
-                 if lang == "English" else "🎤 பதிவு செய்யும்… முடிந்ததும் Stop அழுத்தவும்")
-
-    def _toggle_pause():
-        st.session_state.voice_paused = not st.session_state.get("voice_paused", False)
-
-    pc1, pc2 = st.columns([3, 1])
-    with pc1:
-        st.markdown(
-            f'<div class="voice-status-text" style="font-weight:700;color:#166534;font-size:0.95rem;padding:6px 0;">{mic_label if not paused else "⏸ Voice paused — press Resume to record again"}</div>',
-            unsafe_allow_html=True,
-        )
-    with pc2:
-        st.button("⏸ Pause" if not paused else "🎙 Resume", key="vp_chat",
-                  use_container_width=True, on_click=_toggle_pause)
-
-    if paused:
-        return
-
-    components.html(
-        f"""
-    <style>
-    .vconsole {{ border:2.5px solid #86efac; border-radius:16px; padding:10px 14px; background:#ffffff; font-family:'Plus Jakarta Sans',sans-serif; }}
-    .vtrans {{ min-height:46px; background:#fffbeb; border:2px solid #f59e0b; border-radius:12px; padding:8px 14px; color:#78350f; font-size:1.05rem; font-weight:600; margin:8px 0; word-break:break-word; }}
-    .vstop {{ width:100%; padding:12px 0; border:none; border-radius:12px; cursor:pointer; font-size:1.1rem; font-weight:800; color:#ffffff; background:linear-gradient(135deg,#1b7332 0%,#15803d 100%); box-shadow:0 4px 14px rgba(27,115,50,0.28); }}
-    .vhint {{ font-size:0.8rem; color:#475569; text-align:center; margin-top:6px; }}
-    </style>
-    <div class="vconsole">
-        <div class="vtrans" id="vTranscript">…</div>
-        <button class="vstop" id="vStopBtn">⏹ Stop &amp; Send</button>
-        <div class="vhint">{"Speak freely — recording continues until you press Stop. Long pauses won't cut you off (recording auto-continues every ~60 s)." if lang == "English" else "தயங்காமல் பேசுங்கள் — Stop அழுத்தும் வரை பதிவு தொடரும்."}</div>
-    </div>
-    <script>
-    (function() {{
-        var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!SR) {{
-            document.querySelector('.vhint').innerText = {json.dumps(L["no_support"])};
-            document.getElementById('vStopBtn').disabled = true;
-            return;
-        }}
-        var rec = null, manualStop = false, restartTimer = null;
-        var transcript = '';
-        var transEl = document.getElementById('vTranscript');
-
-        function paint() {{
-            transEl.innerText = transcript || '…';
-            try {{
-                var s = window.parent.document.querySelector('.voice-status-text');
-                if (s) s.innerText = '🎤 Recording… ' + transcript.trim().split(/\\s+/).filter(Boolean).length + ' words — press Stop when done';
-            }} catch (e) {{}}
-        }}
-
-        function start() {{
-            try {{
-                rec = new SR();
-                rec.lang = '{lang_code}';
-                rec.interimResults = true;
-                rec.maxAlternatives = 1;
-                rec.continuous = true;
-                rec.onaudiostart = function() {{ paint(); }};
-                rec.onresult = function(e) {{
-                    // rebuild transcript from all finalized results
-                    transcript = '';
-                    for (var i = 0; i < e.results.length; i++) {{
-                        if (e.results[i].isFinal) transcript += e.results[i][0].transcript;
-                    }}
-                    var last = e.results[e.results.length-1];
-                    if (last && !last.isFinal) paint((transcript + ' ' + last[0].transcript));
-                    else paint();
-                }};
-                rec.onerror = function(e) {{
-                    if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {{
-                        try {{ var s = window.parent.document.querySelector('.voice-status-text'); if (s) s.innerText = '🎤 Mic blocked — allow microphone access'; }} catch (err) {{}}
-                    }}
-                }};
-                rec.onend = function() {{
-                    if (manualStop) return;
-                    // Chrome caps sessions (~60 s): restart and keep recording.
-                    restartTimer = setTimeout(start, 300);
-                }};
-                rec.start();
-            }} catch (e) {{ restartTimer = setTimeout(start, 600); }}
-        }}
-
-        function sendAndStop() {{
-            manualStop = true;
-            clearTimeout(restartTimer);
-            try {{ rec.stop(); }} catch (e) {{}}
-            var t = (transcript || '').trim();
-            try {{
-                var s = window.parent.document.querySelector('.voice-status-text');
-                if (s) s.innerText = '⏳ Transcribed — generating the answer…';
-            }} catch (e) {{}}
-            if (!t) {{
-                transEl.innerText = {json.dumps(L["try_again"])};
-                manualStop = false;
-                setTimeout(start, 500);
-                return;
-            }}
-            try {{
-                var ta = window.parent.document.querySelector('textarea[aria-label]');
-                if (!ta) ta = window.parent.document.querySelector('[data-testid="stChatInput"] textarea');
-                if (!ta) return;
-                var setter = Object.getOwnPropertyDescriptor(window.parent.HTMLTextAreaElement.prototype, 'value').set;
-                setter.call(ta, t);
-                ta.dispatchEvent(new window.parent.Event('input', {{ bubbles: true }}));
-                setTimeout(function() {{
-                    var root = ta.closest('[data-testid="stChatInput"]') || window.parent.document;
-                    var btn = root.querySelector('button[aria-label="Send"], button[data-testid="stChatInputSendButton"]');
-                    if (!btn) {{
-                        var btns = window.parent.document.querySelectorAll('button');
-                        for (var i = btns.length - 1; i >= 0; i--) {{
-                            if (btns[i].offsetParent && !btns[i].disabled && btns[i].querySelector('svg')) {{ btn = btns[i]; break; }}
-                        }}
-                    }}
-                    if (btn) btn.click(); else {{ ta.focus(); ta.dispatchEvent(new window.parent.KeyboardEvent('keydown', {{key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true}})); }}
-                }}, 80);
-            }} catch (err) {{
-                transEl.innerText = 'Send failed — tap ⏹ again';
-                manualStop = false;
-                setTimeout(start, 800);
-            }}
-        }}
-
-        document.getElementById('vStopBtn').onclick = sendAndStop;
-        start();
-    }})();
-    """,
-        height=170,
+    start_label = "🎙 Start Recording" if lang == "English" else "🎙 பதிவைத் தொடங்கு"
+    stop_label = "⏹ Stop & Send" if lang == "English" else "⏹ நிறுத்தி அனுப்பு"
+    hint = ("Tap Start, ask your question, then tap Stop & Send."
+            if lang == "English" else
+            "Start அழுத்தி உங்கள் கேள்வியைக் கேளுங்கள், பிறகு Stop & Send அழுத்துங்கள்.")
+    st.markdown(
+        f'<div style="font-weight:700;color:#166534;font-size:0.95rem;padding:2px 0 6px 0;">🎤 {hint}</div>',
+        unsafe_allow_html=True,
     )
-    return None
+    audio = mic_recorder(
+        start_prompt=start_label,
+        stop_prompt=stop_label,
+        just_once=True,
+        use_container_width=True,
+        format="wav",
+        key="voice_console",
+    )
+    if not audio:
+        return None
+    with st.spinner("⏳ Transcribing your question…" if lang == "English"
+                    else "⏳ உங்கள் கேள்வியை எழுத்தாக்குகிறேன்…"):
+        text, err = sarvam_speech_to_text(audio["bytes"], lang)
+    if err:
+        st.error(err)
+        return None
+    return (text or "").strip() or None
 
 
 def _legacy_voice_widget_disabled(step_key: str, lang: str) -> str | None:
@@ -1642,13 +1567,9 @@ def view_main_chat():
             </div>
             """, unsafe_allow_html=True)
         else:
-            # Highlighted AI Response Card
+            # Highlighted AI Response Card (header badges removed — minimal card)
             st.markdown(f"""
             <div class="ai-msg-bubble">
-                <div class="ai-msg-header">
-                    <span class="ai-badge">🌾 {L["ai_guidance"]}</span>
-                    <span class="verified-pill">🛡️ ICAR & TNAU Grounded</span>
-                </div>
                 <div class="ai-text-content">
             """, unsafe_allow_html=True)
 
@@ -1700,12 +1621,12 @@ def view_main_chat():
                 )
 
     # ========================================================
-    # DEDICATED LIVE VOICE ASSISTANT BAR (hands-free, auto-rearming)
+    # DEDICATED VOICE ASSISTANT BAR (manual Start → Stop & Send, Sarvam STT)
     # ========================================================
-    voice_query = None  # transcripts arrive via st.chat_input injection
+    voice_query = None  # set by the voice console (Sarvam STT transcript)
     if st.session_state.voice_mode:
         if MIC_STT_AVAILABLE:
-            voice_console_auto(lang)
+            voice_query = voice_console_auto(lang)
         else:
             st.markdown(f"""
             <div style="background:#ffffff; border:2.5px solid #2e7d32; border-radius:18px; padding:14px 20px; margin: 15px 0 10px 0; box-shadow:0 4px 16px rgba(0,0,0,0.06);">
