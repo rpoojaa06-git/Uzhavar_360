@@ -13,11 +13,35 @@ Highlighted, High-Contrast UI & Accessible Farmer Experience:
 """
 
 import streamlit as st
+import streamlit.components.v1 as components
+
+try:
+    from streamlit_mic_recorder import speech_to_text, mic_recorder
+    MIC_STT_AVAILABLE = True
+except Exception:  # optional dependency — app degrades to typed input
+    speech_to_text = None
+    mic_recorder = None
+    MIC_STT_AVAILABLE = False
+
 import re
 import json
 import time
 import html
 from app.profile_store import save_farmer_profile
+
+try:
+    from app.sarvam_tts import render_sarvam_audio
+    SARVAM_TTS = True
+except Exception:
+    render_sarvam_audio = None
+    SARVAM_TTS = False
+
+try:
+    from app.sarvam_stt import sarvam_speech_to_text, SARVAM_STT_READY
+    SARVAM_STT = SARVAM_STT_READY
+except Exception:  # STT unavailable — voice falls back to browser speech
+    sarvam_speech_to_text = None
+    SARVAM_STT = False
 
 # ============================================================
 # PAGE CONFIGURATION
@@ -522,6 +546,9 @@ LABELS = {
         "age_label": "Your age in years:",
         "your_question": "Your Question:",
         "ai_guidance": "Uzhavar AI Guidance",
+        "demo_links_card": "Uzhavar Demo App",
+        "demo_links_hint": "Open this page of the demo app for the sample data",
+        "demo_links_footer": "🌐 Browse the full demo app",
     },
     "Tamil": {
         "begin": "▶ வழிகாட்டலை தொடங்கு",
@@ -568,6 +595,9 @@ LABELS = {
         "age_label": "உங்கள் வயது:",
         "your_question": "உங்கள் கேள்வி:",
         "ai_guidance": "உழவர் AI வழிகாட்டல்",
+        "demo_links_card": "உழவர் மாதிரி செயலி",
+        "demo_links_hint": "மாதிரி தரவுக்கு செயலியின் இந்த பக்கத்தை திறக்கவும்",
+        "demo_links_footer": "🌐 முழு மாதிரி செயலியையும் பார்க்க",
     },
 }
 
@@ -592,34 +622,73 @@ for key, default in _INITIAL_STATE.items():
 # TEXT-TO-SPEECH (TTS) CLEANER & WEB SPEECH ENGINE
 # ============================================================
 def clean_for_speech(text: str) -> str:
-    """Strips markdown asterisks, underscores, headers, and code so TTS speaks naturally."""
+    """Make text natural to SPEAK: drops emojis/symbols/markdown, keeps sentence
+    punctuation (. , ? ! : ;) so the voice pauses correctly, converts the rest.
+    (Fixes: TTS previously read out emojis, bullets, markdown and stray symbols.)"""
     if not text:
         return ""
-    # Remove markdown links: [label](url) -> label
+    # 1. Markdown links -> their label
     t = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', text)
-    # Remove code blocks
-    t = re.sub(r'```.*?```', '', t, flags=re.DOTALL)
-    # Strip markdown symbols
-    for ch in ['*', '_', '#', '`', '~', '>', '|', '•']:
-        t = t.replace(ch, '')
-    # Remove HTML tags
-    t = re.sub(r'<[^>]+>', '', t)
-    # Remove list bullet markers like - or + at start of lines
-    t = re.sub(r'^\s*[-+]\s+', '', t, flags=re.MULTILINE)
-    # Collapse multiple spaces and newlines into clean sentences
+    # 2. Code blocks and inline code out
+    t = re.sub(r'```.*?```', ' ', t, flags=re.DOTALL)
+    t = re.sub(r'`[^`]*`', ' ', t)
+    # 3. Emojis, pictographs, dingbats and misc symbols out (before other strips;
+    #    ranges cover emoji + variation selectors + ZWJ + skin tones)
+    t = re.sub(
+        r'[\U0001F000-\U0001FAFF\U00002600-\U000027BF\U00002B00-\U00002BFF'
+        r'\U0001F1E6-\U0001F1FF\U0000FE00-\U0000FE0F\U00002190-\U000021FF'
+        r'\U00002700-\U000027BF\U0001F900-\U0001F9FF\U000025A0-\U000025FF'
+        r'\U00002100-\U0000214F\U00003030\U0000303D\U00003297\U00003299\U0000200D]',
+        ' ', t)
+    # 4. Headings/list/quote/HR markers -> spoken separators
+    t = re.sub(r'^#{1,6}\s*', '', t, flags=re.MULTILINE)
+    t = re.sub(r'^\s*[-+*]\s+', '', t, flags=re.MULTILINE)   # bullets
+    t = re.sub(r'^\s*>\s?', '', t, flags=re.MULTILINE)       # blockquotes
+    t = re.sub(r'^\s*-{3,}\s*$', ' ', t, flags=re.MULTILINE)  # horizontal rules
+    t = re.sub(r'\n?\*\*\*?\n?', ' ', t)                     # leftover bold rules
+    # 5. Bold/italic markers and backticks
+    t = t.replace('**', ' ').replace('*', ' ').replace('_', ' ')
+    t = t.replace('`', ' ').replace('~', ' ')
+    # 6. HTML tags out
+    t = re.sub(r'<[^>]+>', ' ', t)
+    # 7. Symbols TTS must not read aloud -> drop or verbalize
+    t = t.replace('&', ' and ')
+    t = re.sub(r'https?://\S+', ' ', t)                      # never read URLs
+    t = re.sub(r'(?<=\w)/(?=\w)', ' per ', t)                # ml/hectare -> ml per hectare
+    t = re.sub(r'(?<=\d)%', ' percent', t)
+    t = re.sub(r'[#`|•◦▪►✓✔☑→←↔■□{}<>\\/=+^~]', ' ', t)
+    t = re.sub(r'\bRs\.?\s?', 'rupees ', t)
+    t = re.sub(r'₹', 'rupees ', t)
+    # 8. Keep ONLY natural speech punctuation; drop brackets/quotes/dashes etc.
+    t = re.sub(r'[^\w\s.,?!:;\'\u0b80-\u0bff]', ' ', t)
+    # 9. Tidy spacing around sentence marks (but keep decimals like 0.1 intact)
+    t = re.sub(r'\s+([.,?!:;])', r'\1', t)
+    t = re.sub(r'([.,?!:;])(?=[A-Za-z\u0b80-\u0bff])', r'\1 ', t)
+    # 10. Collapse whitespace
     t = re.sub(r'\s+', ' ', t).strip()
     return t
 
 def trigger_tts(text: str, lang: str, key: str):
-    """Speaks clean text without asterisks or markdown symbols."""
+    """Speaks an onboarding/splash prompt: Sarvam (Shubh) first, browser
+    voice as fallback. Spoken once per unique key."""
     if st.session_state.last_tts_key == key:
         return
     st.session_state.last_tts_key = key
     clean_text = clean_for_speech(text)
+    if not clean_text:
+        return
+    if SARVAM_TTS:
+        try:
+            spoken = render_sarvam_audio(clean_text[:2500], lang, auto_play=True, key=key)
+        except Exception:
+            spoken = False
+        if spoken:
+            return
+    # Fallback: browser speech synthesis (autoplay blocked until first click
+    # in some browsers — the language button click provides that gesture).
     lang_code = "ta-IN" if lang == "Tamil" else "en-IN"
     escaped_text = json.dumps(clean_text)
-
-    st.iframe(f"""
+    components.html(f"""
     <script>
     (function() {{
         var synth = window.speechSynthesis;
@@ -774,12 +843,105 @@ def render_audio_player(text: str, lang: str, auto_play: bool = False, player_id
     </body>
     </html>
     """
-    st.iframe(player_html, height=54)
+    components.html(player_html, height=54)
 
 # ============================================================
 # PROMINENT LIVE VOICE CAPTURE WIDGET (STT)
 # ============================================================
 def voice_capture_widget(step_key: str, lang: str) -> str | None:
+    """One-shot speech capture for onboarding steps (returns the transcript).
+
+    Prefers MediaRecorder capture + Sarvam STT (server-side, browser-
+    independent), falling back to the package's browser speech widget
+    (Chrome-only) when Sarvam STT is not configured.
+    """
+    L = LABELS[lang]
+    if not MIC_STT_AVAILABLE:
+        st.caption("🎙️ " + L["no_support"])
+        return None
+    if SARVAM_STT and sarvam_speech_to_text:
+        audio = mic_recorder(
+            start_prompt=L["tap_mic"],
+            stop_prompt="⏹ Stop",
+            just_once=True,
+            use_container_width=True,
+            format="wav",
+            key=f"mic_{step_key}",
+        )
+        if not audio:
+            return None
+        with st.spinner("⏳ Transcribing…" if lang == "English" else "⏳ எழுத்தாக்குகிறேன்…"):
+            text, err = sarvam_speech_to_text(audio["bytes"], lang)
+        if err:
+            st.error(err)
+            return None
+        return (text or "").strip() or None
+    # Fallback: browser-native speech recognition (Chrome only)
+    lang_code = "ta-IN" if lang == "Tamil" else "en-IN"
+    text = speech_to_text(
+        language=lang_code,
+        start_prompt=L["tap_mic"],
+        stop_prompt="⏹ Stop",
+        use_container_width=True,
+        just_once=True,
+        key=f"stt_{step_key}",
+    )
+    return (text or "").strip() or None
+
+
+def voice_console_auto(lang: str) -> str | None:
+    """Chat voice console: press 🎙 Start Recording, ask the question, then
+    press ⏹ Stop & Send — the recording is transcribed SERVER-SIDE with
+    Sarvam STT and returned for the chat pipeline.
+
+    Why not the browser's Web Speech API (webkitSpeechRecognition)? It is
+    Chrome-only and silently fails (e.g. 'network' error) in Edge and in
+    environments without Google's speech servers — exactly the "Start
+    Recording does nothing" bug. MediaRecorder + getUserMedia (used here)
+    work in every modern browser, and the transcription happens on the
+    server with the same Sarvam key as the voice output. No auto-record:
+    nothing captures until the farmer presses Start.
+    """
+    L = LABELS[lang]
+    if not MIC_STT_AVAILABLE:
+        st.caption("🎙️ " + L["no_support"])
+        return None
+    if not (SARVAM_STT and sarvam_speech_to_text):
+        st.caption("🎙️ " + L["no_support"])
+        return None
+
+    start_label = "🎙 Start Recording" if lang == "English" else "🎙 பதிவைத் தொடங்கு"
+    stop_label = "⏹ Stop & Send" if lang == "English" else "⏹ நிறுத்தி அனுப்பு"
+    hint = ("Tap Start, ask your question, then tap Stop & Send."
+            if lang == "English" else
+            "Start அழுத்தி உங்கள் கேள்வியைக் கேளுங்கள், பிறகு Stop & Send அழுத்துங்கள்.")
+    st.markdown(
+        f'<div style="font-weight:700;color:#166534;font-size:0.95rem;padding:2px 0 6px 0;">🎤 {hint}</div>',
+        unsafe_allow_html=True,
+    )
+    audio = mic_recorder(
+        start_prompt=start_label,
+        stop_prompt=stop_label,
+        just_once=True,
+        use_container_width=True,
+        format="wav",
+        key="voice_console",
+    )
+    if not audio:
+        return None
+    with st.spinner("⏳ Transcribing your question…" if lang == "English"
+                    else "⏳ உங்கள் கேள்வியை எழுத்தாக்குகிறேன்…"):
+        text, err = sarvam_speech_to_text(audio["bytes"], lang)
+    if err:
+        st.error(err)
+        return None
+    return (text or "").strip() or None
+
+
+def _legacy_voice_widget_disabled(step_key: str, lang: str) -> str | None:
+    """Superseded by voice_capture_widget above (kept for reference, never called):
+    the old iframe mic + ?vresult= query-param round-trip reloaded the whole page
+    on every spoken turn. Safe to delete once the integration is merged."""
     params = st.query_params
     if params.get("vstep") == step_key and params.get("vresult"):
         result = params["vresult"]
@@ -789,7 +951,7 @@ def voice_capture_widget(step_key: str, lang: str) -> str | None:
     L = LABELS[lang]
     lang_code = "ta-IN" if lang == "Tamil" else "en-IN"
 
-    st.iframe(f"""
+    components.html(f"""
     <style>
     .voice-hub {{
         display: flex;
@@ -1071,24 +1233,9 @@ def complete_onboarding():
 # VIEW 1: LANGUAGE SELECTION SPLASH
 # ============================================================
 def view_language_splash():
-    st.iframe("""
-    <script>
-    (function() {
-        var s = window.speechSynthesis;
-        s.cancel();
-        function playPrompt() {
-            var en = new SpeechSynthesisUtterance("Welcome to Uzhavar AI. Please choose your language — English or Tamil.");
-            en.lang = 'en-IN'; en.rate = 0.88;
-            var ta = new SpeechSynthesisUtterance("உழவர் AI-க்கு வரவேற்கிறோம். தயவுசெய்து உங்கள் மொழியை தேர்ந்தெடுங்கள் — ஆங்கிலம் அல்லது தமிழ்.");
-            ta.lang = 'ta-IN'; ta.rate = 0.88;
-            en.onend = function() { s.speak(ta); };
-            s.speak(en);
-        }
-        s.getVoices().length ? playPrompt() : s.addEventListener('voiceschanged', playPrompt, {once:true});
-    })();
-    </script>
-    """, height=1)
-
+    # NOTE: browser autoplay policy blocks speech before the first user click,
+    # so the welcome audio is triggered AFTER the language button is tapped
+    # (the intro prompt inside onboarding now handles that first voice).
     st.markdown("""
     <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:65vh; text-align:center; padding:20px;">
         <div style="font-size: 5.5rem; margin-bottom: 0.5rem; filter: drop-shadow(0 8px 16px rgba(27,115,50,0.25)); animation: gentleFloat 3s infinite ease-in-out;">🌾</div>
@@ -1420,26 +1567,42 @@ def view_main_chat():
             </div>
             """, unsafe_allow_html=True)
         else:
-            # Highlighted AI Response Card
+            # Highlighted AI Response Card (header badges removed — minimal card)
             st.markdown(f"""
             <div class="ai-msg-bubble">
-                <div class="ai-msg-header">
-                    <span class="ai-badge">🌾 {L["ai_guidance"]}</span>
-                    <span class="verified-pill">🛡️ ICAR & TNAU Grounded</span>
-                </div>
                 <div class="ai-text-content">
             """, unsafe_allow_html=True)
 
+            # Display/spoken content: strip the appended link block (its URL is
+            # rendered in the styled card below), keep only the spoken instruction
+            # so TTS never reads a raw URL.
+            content_display = content
+            dl_msg = msg.get("deep_link")
+            if dl_msg:
+                content_display = content.rsplit("\n\n---\n\n", 1)[0]
+                if dl_msg.get("spoken"):
+                    content_display += f"\n\n👉 {dl_msg['spoken']}"
+
             # Markdown formatted output for the content
-            st.markdown(content)
+            st.markdown(content_display)
 
             st.markdown("</div></div>", unsafe_allow_html=True)
 
-            # Interactive Audio Player with Play, Pause, Resume, Stop controls
+            # Interactive Audio Player — prefer Sarvam (Shubh) voice when the
+            # API key is configured; otherwise fall back to browser speech.
             should_auto_play = (st.session_state.voice_mode and st.session_state.get("tts_auto_play_idx") == m_idx)
             if should_auto_play:
                 st.session_state.tts_auto_play_idx = None
-            render_audio_player(content[:600], lang, auto_play=should_auto_play, player_id=f"player_{m_idx}")
+            speech_text = clean_for_speech(content_display)
+            if SARVAM_TTS and speech_text:
+                try:
+                    spoken = render_sarvam_audio(speech_text[:2500], lang, auto_play=should_auto_play)
+                except Exception:
+                    spoken = False
+            else:
+                spoken = False
+            if not spoken:
+                render_audio_player(speech_text[:600], lang, auto_play=should_auto_play, player_id=f"player_{m_idx}")
 
             # Citations list
             if msg.get("sources"):
@@ -1447,15 +1610,23 @@ def view_main_chat():
                     for src in msg["sources"]:
                         st.markdown(f"• **{src['source']}** (Page {src['page']}) — *Relevance: {src['score']}*")
 
+            # Demo deep link: one simple, tappable inline link (no big card —
+            # keep the UI minimal for farmers new to apps).
+            dl = msg.get("deep_link")
+            if dl:
+                url = dl["url"]
+                st.markdown(
+                    f'<a href="{url}" target="_blank" style="font-weight:700; color:#15803d; font-size:1.02rem;">🔗 Open the {html.escape(dl.get("label_en") or "demo app")} page</a>',
+                    unsafe_allow_html=True,
+                )
+
     # ========================================================
-    # DEDICATED LIVE VOICE ASSISTANT BAR
+    # DEDICATED VOICE ASSISTANT BAR (manual Start → Stop & Send, Sarvam STT)
     # ========================================================
-    voice_query = None
+    voice_query = None  # set by the voice console (Sarvam STT transcript)
     if st.session_state.voice_mode:
-        url_params = st.query_params
-        if url_params.get("vstep") == "chat" and url_params.get("vresult"):
-            voice_query = url_params["vresult"]
-            st.query_params.clear()
+        if MIC_STT_AVAILABLE:
+            voice_query = voice_console_auto(lang)
         else:
             st.markdown(f"""
             <div style="background:#ffffff; border:2.5px solid #2e7d32; border-radius:18px; padding:14px 20px; margin: 15px 0 10px 0; box-shadow:0 4px 16px rgba(0,0,0,0.06);">
@@ -1464,7 +1635,7 @@ def view_main_chat():
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            voice_query = voice_capture_widget("chat", lang)
+            st.caption("🎙️ " + L["no_support"])
 
     # Text Input Bar (Always Available)
     typed_query = st.chat_input(L["chat_placeholder"])
@@ -1476,57 +1647,73 @@ def view_main_chat():
         # Append user query to conversation
         st.session_state.messages.append({"role": "user", "content": active_query})
 
-        # Context profile dictionary
-        profile_dict = {
-            "name": info.get("name"),
-            "age": info.get("age"),
-            "gender": info.get("gender"),
-            "farmer_type": info.get("farmer_type"),
-            "has_docs": info.get("has_docs"),
-            "language": lang,
-            "farming_stage": "Planning",
-        }
+        # Show the farmer's question IMMEDIATELY, with the spinner BELOW it
+        # while the AI thinks (instead of a bare spinner with no context).
+        pending = st.empty()
+        with pending.container():
+            escaped_q = html.escape(active_query).replace("\n", "<br>")
+            st.markdown(f"""
+            <div class="user-msg-bubble">
+                <div class="user-msg-header">
+                    <span class="user-badge">👨‍🌾 {L["your_question"]}</span>
+                    <span style="font-size:0.8rem; color:#1b7332; font-weight:700;">{farmer_name}</span>
+                </div>
+                <div class="user-text-content">{escaped_q}</div>
+            </div>
+            """, unsafe_allow_html=True)
+            with st.spinner(L["spinner"]):
+                rag = get_rag_engine()
+                if rag:
+                    answer_text, contexts, _, _ = rag.answer(
+                        question=active_query,
+                        profile={
+                            "name": info.get("name"),
+                            "age": info.get("age"),
+                            "gender": info.get("gender"),
+                            "farmer_type": info.get("farmer_type"),
+                            "has_docs": info.get("has_docs"),
+                            "language": lang,
+                            "farming_stage": "Planning",
+                        },
+                        history=[
+                            {"role": m["role"], "content": (
+                                m["content"].rsplit("\n\n---\n\n", 1)[0]
+                                if (m["role"] == "assistant" and m.get("deep_link"))
+                                else m["content"]
+                            )}
+                            for m in st.session_state.messages[:-1]
+                        ],
+                        return_details=True
+                    )
+                    deep_link = getattr(rag, "last_deep_link", None)
+                else:
+                    answer_text = (
+                        "Uzhavar AI engine is initializing. Please verify document index configuration."
+                        if lang == "English" else
+                        "உழவர் AI தயாராகிறது. ஆவண குறியீட்டு அமைப்பை சரிபார்க்கவும்."
+                    )
+                    contexts = []
+                    deep_link = None
+        pending.empty()
 
-        chat_history = [
-            {"role": m["role"], "content": m["content"]}
-            for m in st.session_state.messages[:-1]
+        sources_stored = [
+            {
+                "source": c["source"],
+                "page": c["page"],
+                "score": round(c.get("rerank_score", c.get("score", 0.0)), 4)
+            }
+            for c in contexts
         ]
 
-        # Generate Grounded Guidance
-        with st.spinner(L["spinner"]):
-            rag = get_rag_engine()
-            if rag:
-                answer_text, contexts, _, _ = rag.answer(
-                    question=active_query,
-                    profile=profile_dict,
-                    history=chat_history,
-                    return_details=True
-                )
-            else:
-                answer_text = (
-                    "Uzhavar AI engine is initializing. Please verify document index configuration."
-                    if lang == "English" else
-                    "உழவர் AI தயாராகிறது. ஆவண குறியீட்டு அமைப்பை சரிபார்க்கவும்."
-                )
-                contexts = []
-
-            sources_stored = [
-                {
-                    "source": c["source"],
-                    "page": c["page"],
-                    "score": round(c.get("rerank_score", c.get("score", 0.0)), 4)
-                }
-                for c in contexts
-            ]
-
-            st.session_state.messages.append({
-                "role": "assistant",
-                "content": answer_text,
-                "sources": sources_stored
-            })
-            if st.session_state.voice_mode:
-                st.session_state.tts_auto_play_idx = len(st.session_state.messages) - 1
-            st.rerun()
+        st.session_state.messages.append({
+            "role": "assistant",
+            "content": answer_text,
+            "sources": sources_stored,
+            "deep_link": deep_link,
+        })
+        if st.session_state.voice_mode:
+            st.session_state.tts_auto_play_idx = len(st.session_state.messages) - 1
+        st.rerun()
 
     # Minimal Sidebar with System Status
     with st.sidebar:
