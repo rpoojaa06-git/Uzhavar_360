@@ -139,28 +139,32 @@ def service_url(card: Dict) -> str:
 
 
 def spoken_instruction(card: Dict, lang: str) -> str:
+    """One short, spoken-friendly call to action. The visible link button in the
+    UI is the only other place the farmer is pointed to the page."""
     if lang == "Tamil":
-        label = card["ta"]
-        return (f"இதற்கு, Uzhavar மாதிரி செயலியில் {label} பக்கம் உள்ளது — "
-                "இந்த பதிலுக்கு கீழே உள்ள லிங்கை தட்டவும்.")
-    label = card["en"]
-    return (f"For this, the Uzhavar demo app has a {label} page — "
-            "tap the link shown below this answer.")
+        return f"{card['ta']} பக்கத்தை உழவர் செயலியில் திறக்க, கீழே உள்ள இணைப்பைப் பயன்படுத்தவும்."
+    return f"Open the {card['en']} page in the Uzhavar app using the link below."
+
+
+def link_text(card: Dict, lang: str) -> str:
+    """Visible label for the link (button text in the UI)."""
+    if lang == "Tamil":
+        return f"உழவர் செயலியில் {card['ta']} பக்கத்தைத் திற"
+    return f"Open {card['en']} in the Uzhavar app"
 
 
 def build_link_tail(card: Dict, lang: str) -> str:
     """
-    Markdown block appended to an answer: a clickable card with the visible
-    URL plus the spoken instruction. The TTS cleaner strips the raw URL from
+    Markdown block appended to an answer for API clients: the page name, the
+    URL and a single instruction. The TTS cleaner strips the raw URL from
     speech, so the farmer only hears the instruction.
     """
     label = f"{card['en']} · {card['ta']}"
-    instruction = spoken_instruction(card, lang)
     return (
         "\n\n---\n\n"
-        f"{card['emoji']} **Uzhavar demo app — {label}**\n\n"
+        f"{card['emoji']} **Uzhavar app — {label}**\n\n"
         f"🔗 {service_url(card)}\n\n"
-        f"👉 {instruction}"
+        f"👉 {spoken_instruction(card, lang)}"
     )
 
 

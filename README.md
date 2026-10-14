@@ -61,6 +61,7 @@ uzhavar_ai_rag/
 │   └── streamlit_app.py       # App launcher shim
 ├── data/                      # Verified agricultural knowledge PDFs
 ├── scripts/                   # Remote ingestion notebook & utilities
+├── uzhavar-ui/                # React demo UI and deep-link targets
 ├── streamlit_app.py           # Main interactive Streamlit application
 ├── UZHAVAR_AI_DOCUMENTATION.md# Comprehensive architectural documentation
 ├── .streamlit/config.toml     # Optimized Streamlit configuration
@@ -117,6 +118,20 @@ uvicorn app.main:app --reload --port 8000
 ```
 
 API documentation will be available at `http://127.0.0.1:8000/docs`.
+
+---
+
+## 🖥️ Demo UI
+
+The `uzhavar-ui` directory contains the React demo interface used by the assistant's deep links. To run it locally:
+
+```powershell
+cd uzhavar-ui
+npm ci
+npm run dev
+```
+
+Open `http://localhost:5173`. To type-check and create a production build, run `npm run build` from `uzhavar-ui`. The UI uses sample demo content and does not submit forms to a backend.
 
 ---
 

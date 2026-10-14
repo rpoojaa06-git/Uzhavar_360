@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-50: #eef5ff;
+  --color-brand-100: #d9e8ff;
+  --color-brand-200: #b6d3fb;
+  --color-brand-500: #2f7fe8;
+  --color-brand-600: #1766d6;
+  --color-brand-700: #1153b3;
+  --color-brand-900: #0b3a80;
+  --font-sans: "Inter", "Noto Sans Tamil", ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+  font-family: var(--font-sans);
+}
+
+body {
+  margin: 0;
+  background-color: #e2e8f0;
+}

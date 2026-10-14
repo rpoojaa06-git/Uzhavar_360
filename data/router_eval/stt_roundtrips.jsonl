@@ -1,0 +1,12 @@
+{"question": "What is the market price of tomato today?", "language": "en", "intent": "demo", "source": "stt", "tier1_demo_card": null, "hardness": "stt_noise"}
+{"question": "Where do I rent a tractor for two days?", "language": "en", "intent": "demo", "source": "stt", "tier1_demo_card": null, "hardness": "stt_noise"}
+{"question": "Am I eligible for the PM Kisan installment?", "language": "en", "intent": "scheme", "source": "stt", "tier1_demo_card": null, "hardness": "stt_noise"}
+{"question": "How do I apply for the old age pension for farmers?", "language": "en", "intent": "scheme", "source": "stt", "tier1_demo_card": null, "hardness": "stt_noise"}
+{"question": "How do I control stem borer in paddy?", "language": "en", "intent": "agri", "source": "stt", "tier1_demo_card": null, "hardness": "stt_noise"}
+{"question": "When is the right time to transplant tomato seedlings?", "language": "en", "intent": "agri", "source": "stt", "tier1_demo_card": null, "hardness": "stt_noise"}
+{"question": "தற்போதைய சந்தை விலை என்ன?", "language": "ta", "intent": "demo", "source": "stt", "tier1_demo_card": null, "hardness": "stt_noise"}
+{"question": "உரம் கையிருப்பு எவ்வளவு உள்ளது?", "language": "ta", "intent": "demo", "source": "stt", "tier1_demo_card": null, "hardness": "stt_noise"}
+{"question": "ஓய்வூதிய தொகை எவ்வளவு?", "language": "ta", "intent": "scheme", "source": "stt", "tier1_demo_card": null, "hardness": "stt_noise"}
+{"question": "பயிர் காப்பீட்டிற்கு விண்ணப்பிக்க என்ன தகுதி தேவை?", "language": "ta", "intent": "scheme", "source": "stt", "tier1_demo_card": null, "hardness": "stt_noise"}
+{"question": "நெல்லின் இலை மஞ்சளாக மாறுகிறது, என்ன செய்வது?", "language": "ta", "intent": "agri", "source": "stt", "tier1_demo_card": null, "hardness": "stt_noise"}
+{"question": "கலைக்கட்டுப்பாடு என்ன வழி?", "language": "ta", "intent": "agri", "source": "stt", "tier1_demo_card": null, "hardness": "stt_noise"}

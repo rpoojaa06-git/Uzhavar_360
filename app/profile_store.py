@@ -129,3 +129,47 @@ def get_latest_profile() -> Optional[Dict[str, Any]]:
     """Retrieve the most recently registered farmer profile."""
     profiles = get_all_profiles()
     return profiles[-1] if profiles else None
+
+
+# ----------------------------------------------------------------------
+# Saved chat state (restores the farmer's session after a page refresh)
+# ----------------------------------------------------------------------
+import re as _re
+
+_ID_OK = _re.compile(r"^[A-Za-z0-9-]{1,36}$")
+
+
+def save_chat_state(profile_id: str, state: Dict[str, Any]) -> None:
+    """Persist language, mode, profile and chat messages for one farmer."""
+    if not profile_id or not _ID_OK.match(profile_id):
+        return
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS chat_state (
+                profile_id TEXT PRIMARY KEY,
+                updated_at TEXT NOT NULL,
+                state_json TEXT NOT NULL
+            )
+        """)
+        conn.execute("""
+            INSERT INTO chat_state (profile_id, updated_at, state_json) VALUES (?, ?, ?)
+            ON CONFLICT(profile_id) DO UPDATE SET
+                updated_at=excluded.updated_at, state_json=excluded.state_json
+        """, (profile_id, datetime.now().isoformat(),
+              json.dumps(state, ensure_ascii=False, default=str)))
+        conn.commit()
+
+
+def load_chat_state(profile_id: str) -> Optional[Dict[str, Any]]:
+    """Return the saved state for a farmer id, or None if unknown."""
+    if not profile_id or not _ID_OK.match(profile_id) or not DB_PATH.exists():
+        return None
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            row = conn.execute(
+                "SELECT state_json FROM chat_state WHERE profile_id = ?", (profile_id,)
+            ).fetchone()
+        return json.loads(row[0]) if row else None
+    except Exception:
+        return None

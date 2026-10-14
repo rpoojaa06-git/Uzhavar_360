@@ -22,9 +22,15 @@ def get_farming_stages():
 
 
 @app.post("/ingest")
-def ingest():
-    count = rag.ingest("data")
-    return {"status": "ok", "chunks_indexed": count}
+def ingest(collection: str = "agri"):
+    """Re-ingest corpora: collection="agri" (default, data/) or "schemes"
+    (data/schemes/ — TN Farmer Welfare Citizen Charter)."""
+    if collection == "schemes":
+        from .config import COLLECTION_SCHEMES
+        count = rag.ingest("data/schemes", collection=COLLECTION_SCHEMES, scheme_headings=True)
+    else:
+        count = rag.ingest("data")
+    return {"status": "ok", "collection": collection, "chunks_indexed": count}
 
 
 @app.post("/chat", response_model=ChatResponse)
@@ -81,4 +87,35 @@ def chat(request: ChatRequest):
         current_stage=stage,
         next_step_recommendation="Consult local agricultural officer or check next stage advisories.",
         deep_link=deep_link,
+        route=getattr(rag, "last_route", None),
     )
+
+
+@app.get("/schemes")
+def list_schemes(department: Optional[str] = None, category: Optional[str] = None):
+    """Retrieve all available schemes, optionally filtered by department or category."""
+    from .schemes import load_all_schemes
+    schemes = load_all_schemes()
+    if department:
+        schemes = [s for s in schemes if (s.get("department") or "").lower() == department.lower()]
+    if category:
+        schemes = [s for s in schemes if (s.get("category") or "").lower() == category.lower()]
+    return {"total": len(schemes), "schemes": schemes}
+
+
+@app.get("/schemes/search")
+def search_schemes_api(q: str, lang: str = "English", limit: int = 5):
+    """Search schemes using keyword / concept matching in Tamil or English."""
+    from .schemes import search_schemes
+    results = search_schemes(query=q, lang=lang, limit=limit)
+    return {"query": q, "total": len(results), "matches": results}
+
+
+@app.post("/schemes/recommend")
+@app.post("/eligibility/check")
+def recommend_schemes_api(profile: Dict[str, Any], limit: int = 4):
+    """Deterministic eligibility check and recommendation for a farmer profile."""
+    from .schemes import recommend_schemes
+    recommendations = recommend_schemes(profile=profile, limit=limit)
+    return {"profile": profile, "total": len(recommendations), "recommended_schemes": recommendations}
+

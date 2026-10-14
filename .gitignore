@@ -1,33 +1,36 @@
-# Environment & Secrets (NEVER COMMIT)
+# Secrets and local environment files
 .env
 .env.*
 *.env
 !.env.example
+*.local
 
-# Python Virtual Environments
+# Dependencies and build output
+node_modules/
+dist/
+.vercel/
+
+# Python virtual environments
 .venv/
 venv/
 env/
+/env
 ENV/
 env.bak/
 venv.bak/
 
-# Byte-compiled / optimized / DLL files
+# Python caches and test output
 __pycache__/
 **/__pycache__/
 *.py[cod]
 *$py.class
-
-# Jupyter Notebook Checkpoints
-.ipynb_checkpoints/
-*/.ipynb_checkpoints/*
-
-# Testing & Coverage
 .pytest_cache/
 .coverage
 htmlcov/
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/*
 
-# Editor & OS files
+# Editor and operating system files
 .vscode/
 .idea/
 *.sublime-workspace
@@ -35,10 +38,9 @@ htmlcov/
 .DS_Store
 Thumbs.db
 
-# Logs
+# Logs and local databases
 *.log
 logs/
-
-# SQLite Databases
 *.db
 *.sqlite3
+data/router_log.jsonl

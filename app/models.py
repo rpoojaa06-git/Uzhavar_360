@@ -1,4 +1,4 @@
-from typing import Optional, List, Dict, Any
+from typing import Optional, List
 from pydantic import BaseModel, Field
 
 # 10 Stages of Farmer Journey (Section 5)
@@ -71,3 +71,4 @@ class ChatResponse(BaseModel):
     current_stage: Optional[str] = None
     next_step_recommendation: Optional[str] = None
     deep_link: Optional[DeepLink] = None  # present when the question maps to a demo page
+    route: Optional[str] = None          # "agri" | "scheme" | "demo" — which corpus answered

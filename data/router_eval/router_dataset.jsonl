@@ -1,0 +1,120 @@
+{"question": "best way to control weeds in direct sown paddy", "language": "en", "intent": "agri", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "How do I control stem borer in paddy?", "language": "en", "intent": "agri", "source": "stt", "tier1_demo_card": null, "hardness": "stt_noise", "split": "train"}
+{"question": "how deep should I sow groundnut seeds", "language": "en", "intent": "agri", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "why are my chilli flowers dropping", "language": "en", "intent": "agri", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "When is the right time to transplant tomato seedlings?", "language": "en", "intent": "agri", "source": "stt", "tier1_demo_card": null, "hardness": "stt_noise", "split": "train"}
+{"question": "weather advisory la irrigation nathi varu paan exam", "language": "en", "intent": "agri", "tier1_demo_card": null, "source": "manual", "hardness": "hard", "split": "train"}
+{"question": "urea splitting schedule for sugarcane", "language": "en", "intent": "agri", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "which seed variety suits loamy soil in Thanjavur", "language": "en", "intent": "agri", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "what is the harvest window for CO 4grass", "language": "en", "intent": "agri", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "how do I control stem borer in paddy", "language": "en", "intent": "agri", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "பயிருக்கு எவ்வளவு தண்ணீர் செலுத்த வேண்டும்", "language": "ta", "intent": "agri", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "சந்தையில் விளைபொருள் விலை உயர காரணம் என்ன", "language": "ta", "intent": "agri", "tier1_demo_card": null, "source": "manual", "hardness": "hard", "split": "train"}
+{"question": "கொய்யா மரத்திற்கு என்ன கவனிப்பு வேண்டும்", "language": "ta", "intent": "agri", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "களைக்கட்டுப்பாடு என்ன வழி", "language": "ta", "intent": "agri", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "கரையாம்புழு கட்டுப்படுத்துவது எப்படி", "language": "ta", "intent": "agri", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "மிளகாய் பூ உதிர்வது ஏன்", "language": "ta", "intent": "agri", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "கரும்புக்கு யூரியா எவ்வளவு", "language": "ta", "intent": "agri", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "காப்பீடு எப்படி வேலை செய்யும்", "language": "ta", "intent": "agri", "tier1_demo_card": null, "source": "manual", "hardness": "hard", "split": "train"}
+{"question": "நெல்லின் இலை மஞ்சளாக மாறுகிறது, என்ன செய்வது?", "language": "ta", "intent": "agri", "source": "stt", "tier1_demo_card": null, "hardness": "stt_noise", "split": "train"}
+{"question": "மண் சோதனையின்படி உரம் எப்படி அளிப்பது", "language": "ta", "intent": "agri", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "திட்டம் இல்லாமல் தண்ணீர் வடிகால் எப்படி அமைப்பது", "language": "ta", "intent": "agri", "tier1_demo_card": null, "source": "manual", "hardness": "hard", "split": "train"}
+{"question": "tamato seedling transplant eppo mudiyum", "language": "tanglish", "intent": "agri", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "weed control paddy la best method", "language": "tanglish", "intent": "agri", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "seed variety loamy soil ku best", "language": "tanglish", "intent": "agri", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "scheme la varipinu patharpoo control yenna", "language": "tanglish", "intent": "agri", "tier1_demo_card": null, "source": "manual", "hardness": "hard", "split": "train"}
+{"question": "succ mulching vaccum irukka", "language": "tanglish", "intent": "agri", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "kw'ku water evlo weekly", "language": "tanglish", "intent": "agri", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "paddy la stem borer control yenna", "language": "tanglish", "intent": "agri", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "groundnut seed evlo deep vidanum", "language": "tanglish", "intent": "agri", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "show me the fertilizer stock at the price shop", "language": "en", "intent": "demo", "tier1_demo_card": "fertilizer-stock", "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "who is our agriculture officer, give me the number", "language": "en", "intent": "demo", "tier1_demo_card": "officer-contact", "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "What is the market price of tomato today", "language": "en", "intent": "demo", "tier1_demo_card": "market-price", "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "Where do I rent a tractor for two days?", "language": "en", "intent": "demo", "source": "stt", "tier1_demo_card": null, "hardness": "stt_noise", "split": "train"}
+{"question": "where do I rent a tractor for two days", "language": "en", "intent": "demo", "tier1_demo_card": "machinery-rental", "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "I need to buy a power sprayer where can I look", "language": "en", "intent": "demo", "tier1_demo_card": "e-market", "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "what's the weather going to be like for the next two days", "language": "en", "intent": "demo", "tier1_demo_card": "weather-advisory", "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "what is the soil health card status", "language": "en", "intent": "demo", "tier1_demo_card": "tamil-mannvalam", "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "what seeds are in stock at the store", "language": "en", "intent": "demo", "tier1_demo_card": "seed-stock", "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "உரம் கையிருப்பு எவ்வளவு உள்ளது?", "language": "ta", "intent": "demo", "source": "stt", "tier1_demo_card": null, "hardness": "stt_noise", "split": "train"}
+{"question": "தற்போதைய சந்தை விலை என்ன", "language": "ta", "intent": "demo", "tier1_demo_card": "market-price", "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "டிராக்டர் வாடகைக்கு கிடைக்குமா", "language": "ta", "intent": "demo", "tier1_demo_card": "machinery-rental", "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "உரம் கையிருப்பு எவ்வளவு உள்ளது", "language": "ta", "intent": "demo", "tier1_demo_card": "fertilizer-stock", "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "மண் அறிக்கை எங்கே பார்ப்பது", "language": "ta", "intent": "demo", "tier1_demo_card": "tamil-mannvalam", "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "விதை கிடைக்குமா கடையில்", "language": "ta", "intent": "demo", "tier1_demo_card": "seed-stock", "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "உழவர் செய்திகள் என்ன இருக்கு", "language": "ta", "intent": "demo", "tier1_demo_card": "agri-news", "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "அணையில் தண்ணீர் எவ்வளவு உள்ளது", "language": "ta", "intent": "demo", "tier1_demo_card": "reservoir-levels", "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "தற்போதைய சந்தை விலை என்ன?", "language": "ta", "intent": "demo", "source": "stt", "tier1_demo_card": null, "hardness": "stt_noise", "split": "train"}
+{"question": "dam level eppo paarthalum korayidhu, ippo evlo", "language": "tanglish", "intent": "demo", "tier1_demo_card": "reservoir-levels", "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "price list kuduthukonga", "language": "tanglish", "intent": "demo", "tier1_demo_card": "market-price", "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "uyirvetta officer number sollunga", "language": "tanglish", "intent": "demo", "tier1_demo_card": "officer-contact", "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "farm guide page open pannunga", "language": "tanglish", "intent": "demo", "tier1_demo_card": "farm-guide", "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "uru peru maraka malligapoo vilai", "language": "tanglish", "intent": "demo", "tier1_demo_card": "market-price", "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "seed stock la irukka", "language": "tanglish", "intent": "demo", "tier1_demo_card": "seed-stock", "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "urea stock irukka?", "language": "tanglish", "intent": "demo", "tier1_demo_card": "fertilizer-stock", "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "What subsidy do I get for buying drip irrigation under the government scheme", "language": "en", "intent": "scheme", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "what documents do I need to apply for iso organic certification", "language": "en", "intent": "scheme", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "insurance claim la paddy ruits penalite Sollunga", "language": "en", "intent": "scheme", "tier1_demo_card": null, "source": "manual", "hardness": "hard", "split": "train"}
+{"question": "which department gives the free borewell assistance", "language": "en", "intent": "scheme", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "How do I apply for the old age pension for farmers?", "language": "en", "intent": "scheme", "source": "stt", "tier1_demo_card": null, "hardness": "stt_noise", "split": "train"}
+{"question": "which office handles soil testing", "language": "en", "intent": "scheme", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "I want the exact subsidy rate per acre under KADP", "language": "en", "intent": "scheme", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "Am I eligible for the PM Kisan installment?", "language": "en", "intent": "scheme", "source": "stt", "tier1_demo_card": null, "hardness": "stt_noise", "split": "train"}
+{"question": "Am I eligible for the PM-KISAN instalment", "language": "en", "intent": "scheme", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "what compensation does the government give when crops fail", "language": "en", "intent": "scheme", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "who helps when my crop gets ruined by rain", "language": "en", "intent": "scheme", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "what is the crop insurance claim procedure", "language": "en", "intent": "scheme", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "does the state give anything for dried land farmers", "language": "en", "intent": "scheme", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "பயிர் காப்பீட்டிற்கு விண்ணப்பிக்க என்ன தகுதி தேவை?", "language": "ta", "intent": "scheme", "source": "stt", "tier1_demo_card": null, "hardness": "stt_noise", "split": "train"}
+{"question": "ஓய்வூதிய தொகை எவ்வளவு?", "language": "ta", "intent": "scheme", "source": "stt", "tier1_demo_card": null, "hardness": "stt_noise", "split": "train"}
+{"question": "கலைஞர் வேளாண் திட்டத்தின் நன்மைகள் என்ன", "language": "ta", "intent": "scheme", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "இயந்திரம் வாங்க மானிய விண்ணப்பம் எங்கே கிடைக்கும்", "language": "ta", "intent": "scheme", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "காப்பீட்டுத் தவணை எப்படி பெறுவது", "language": "ta", "intent": "scheme", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "பட்டு வளர்ப்புக்கு அரசு என்ன உதவி செய்யும்", "language": "ta", "intent": "scheme", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "ஓய்வூதியத் தொகை எவ்வளவு", "language": "ta", "intent": "scheme", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "தமிழ்நாடு அரசு மானியத் திட்டங்கள் என்னென்ன உள்ளன", "language": "ta", "intent": "scheme", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "பசுமை இயக்கத்தில் இலவச மரக்கன்று கிடைக்குமா", "language": "ta", "intent": "scheme", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "பயிர் காப்பீட்டிற்கு விண்ணப்பிக்க என்ன தகுதி தேவை", "language": "ta", "intent": "scheme", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "mysore la illa, tamilnadu la KADP la yenna mastyam", "language": "tanglish", "intent": "scheme", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "free borewell assistance ku apply panren, thaaguthi enna", "language": "tanglish", "intent": "scheme", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "anna, drop irrigation ku government la evlo percent mastyam kudupanga", "language": "tanglish", "intent": "scheme", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "crop insurance claim epdi medikkanum", "language": "tanglish", "intent": "scheme", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "pension apply panna enga povaenum", "language": "tanglish", "intent": "scheme", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "government vasooli for crop losss", "language": "tanglish", "intent": "scheme", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "free soil paravai seiyalama", "language": "tanglish", "intent": "scheme", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "government compensation panam eppo varum", "language": "tanglish", "intent": "scheme", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "subsidy tractor vaanguna evlo discount", "language": "tanglish", "intent": "scheme", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "how to get maaruthuvam assistance for dairy", "language": "tanglish", "intent": "scheme", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "train"}
+{"question": "when is the right time to transplant tomato seedlings", "language": "en", "intent": "agri", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "val"}
+{"question": "நிலக்கடலை விதைப்பு ஆழம் எவ்வளவு", "language": "ta", "intent": "agri", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "val"}
+{"question": "pathu valli la oru pulippu irukku, spray enna", "language": "tanglish", "intent": "agri", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "val"}
+{"question": "What is the market price of tomato today?", "language": "en", "intent": "demo", "source": "stt", "tier1_demo_card": null, "hardness": "stt_noise", "split": "val"}
+{"question": "வேளாண் அதிகாரியின் தொலைபேசி எண் என்ன", "language": "ta", "intent": "demo", "tier1_demo_card": "officer-contact", "source": "manual", "hardness": "normal", "split": "val"}
+{"question": "weather epdi irukku namma area la", "language": "tanglish", "intent": "demo", "tier1_demo_card": "weather-advisory", "source": "manual", "hardness": "normal", "split": "val"}
+{"question": "tell me about the Kalaignar agri scheme benefits", "language": "en", "intent": "scheme", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "val"}
+{"question": "how do I apply for the old age pension for farmers", "language": "en", "intent": "scheme", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "val"}
+{"question": "வேளாண் மின்விசை பம்புக்கு மானியம் உண்டா", "language": "ta", "intent": "scheme", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "val"}
+{"question": "goat vargal scheme la yenna documents kaekkaanga", "language": "tanglish", "intent": "scheme", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "val"}
+{"question": "my paddy leaves are turning yellow, what should I spray", "language": "en", "intent": "agri", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "test"}
+{"question": "how much water does a tomato crop need per week", "language": "en", "intent": "agri", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "test"}
+{"question": "what is the temperature the paddy seed germinates at", "language": "en", "intent": "agri", "tier1_demo_card": null, "source": "manual", "hardness": "hard", "split": "test"}
+{"question": "தக்காளி நாற்று எப்போது நடவு செய்வது", "language": "ta", "intent": "agri", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "test"}
+{"question": "கலைக்கட்டுப்பாடு என்ன வழி?", "language": "ta", "intent": "agri", "source": "stt", "tier1_demo_card": null, "hardness": "stt_noise", "split": "test"}
+{"question": "நெல்லின் இலை மஞ்சளாக மாறுகிறது, என்ன செய்வது", "language": "ta", "intent": "agri", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "test"}
+{"question": "chillipoo uhirthu, yenna reason", "language": "tanglish", "intent": "agri", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "test"}
+{"question": "coconut tree ku varipinu control enna", "language": "tanglish", "intent": "agri", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "test"}
+{"question": "how much are they selling onion for", "language": "en", "intent": "demo", "tier1_demo_card": "market-price", "source": "manual", "hardness": "normal", "split": "test"}
+{"question": "check the dam water level in pallava", "language": "en", "intent": "demo", "tier1_demo_card": "reservoir-levels", "source": "manual", "hardness": "normal", "split": "test"}
+{"question": "நாளை மழை வருமா", "language": "ta", "intent": "demo", "tier1_demo_card": "weather-advisory", "source": "manual", "hardness": "normal", "split": "test"}
+{"question": "எனக்கு ஒரு நீர்ப்பாசன இயந்திரம் வேண்டும், எங்கே வாங்கலாம்", "language": "ta", "intent": "demo", "tier1_demo_card": "e-market", "source": "manual", "hardness": "normal", "split": "test"}
+{"question": "anna tomato price enna irukku", "language": "tanglish", "intent": "demo", "tier1_demo_card": "market-price", "source": "manual", "hardness": "normal", "split": "test"}
+{"question": "machinery renta kidaikuma", "language": "tanglish", "intent": "demo", "tier1_demo_card": "machinery-rental", "source": "manual", "hardness": "normal", "split": "test"}
+{"question": "is there any money support if my harvest is destroyed", "language": "en", "intent": "scheme", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "test"}
+{"question": "Does the government scheme cover pest damage compensation?", "language": "en", "intent": "scheme", "tier1_demo_card": null, "source": "manual", "hardness": "hard", "split": "test"}
+{"question": "is there a government grant for backyard poultry", "language": "en", "intent": "scheme", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "test"}
+{"question": "மழையில் பயிர் அழிந்தால் அரசு என்ன செய்யும்", "language": "ta", "intent": "scheme", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "test"}
+{"question": "மண்ணுக்கு என்ன சோதனை இலவசமா வரும்", "language": "ta", "intent": "scheme", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "test"}
+{"question": "மானியத் தொகை கிடைக்க எந்த அலுவலகத்தில் விண்ணப்பிக்க வேண்டும்", "language": "ta", "intent": "scheme", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "test"}
+{"question": "soil card printing enga panranga", "language": "tanglish", "intent": "scheme", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "test"}
+{"question": "scheme la enroll aaga form enga", "language": "tanglish", "intent": "scheme", "tier1_demo_card": null, "source": "manual", "hardness": "hard", "split": "test"}
+{"question": "pmkisan la yenakku kaasu kidaikkumaa", "language": "tanglish", "intent": "scheme", "tier1_demo_card": null, "source": "manual", "hardness": "normal", "split": "test"}
